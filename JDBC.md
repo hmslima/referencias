@@ -11,7 +11,10 @@
 		* [Eclipse](#jdbc_inst_eclipse)
 	
 	* [Primeiro código JDBC](#jdbc_primeiroCodigo)
-</div>
+
+	* [Código com tratamento de exceções](#jdbc_cdctratamentoexcecoes)
+
+	* [db.properties](#jdbc_dbproperties)
 
 # Introdução<span id="intro"></span>
 
@@ -71,7 +74,7 @@ O código é bem simplesinho.
 
             Class.forName("com.mysql.cj.jdbc.Driver"); // Esta linha é opcional
             
-            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/teste", "root", "root"); // Conexão
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/teste?useSSL=false&serverTimezone=UTC", "root", "root"); // Conexão, os parâmetros são a url, o usuário e a senha
             
             Statement st = con.createStatement(); // Statement
             
@@ -84,7 +87,24 @@ O código é bem simplesinho.
             con.close(); // Fechamento da conexão
         }
     }
+
 </div>
+
+Acho que a url `jdbc:mysql://localhost:3306/teste?useSSL=false&serverTimezone=UTC` necessita de um pouco de atenção, vamos dividí-la em partes:
+
+* `jdbc:mysql:`: o protocolo. Por exemplo, se estivéssimos lidando com um banco de dados PostgreSQL, o protocolo seria `jdbc:postgresql:`
+
+* `localhost:3306`: o endereço. Como estou rodando na minha própria máquina, é no localhost
+
+* `teste`: o banco de dados.
+
+* `?useSSL=false&serverTimezone=UTC` as propriedades, no caso temos duas aqui, `useSSL=false` e `serverTimezone=UTC`. No meu caso, eu pude rodar o programa sem usar esses parâmetros, ou seja, meu código rodou bem mesmo assim:
+
+    \[...\]    
+    Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/teste", "root", "root");    
+    \[...\]
+
+Sobre esse `useSSL=false` em particular: SSL é um protocolo de criptografia que criptografa todos os dados usados na comunicaçã entre o servidor e o driver JDBC. Por padrão, `useSSL` é definidido como `true` em certas versões do MySQL. Estou comentando que possa ser que você receba uma mensagem de erro por causa do SSL e defini-lo como `false` é a solução.
 
 
 Agora vamos ver todos os dados da tabela **funcionarios**:
@@ -145,6 +165,7 @@ Agora vamos ver todos os dados da tabela **funcionarios**:
     }
 </div>
 
+## Código com tratamento de exceções<span id="jdbc_cdctratamentoexcecoes"></span>
 
 Vamos fazer um código com `try` `catch`:
 
@@ -198,7 +219,146 @@ Vamos fazer um código com `try` `catch`:
     }
 </div>
 
+## db.properties<span id="jdbc_dbproperties"></span>
 
+Podemos deixar as informações de nome de usuário, senha e link para o banco de dados em um arquivo externo chamado `db.properties`, ele fica na mesma pasta *(não dentro!)* onde a pasta`src` se encontra.
 
+Aproveitarei e deixarei o código um pouco mais profissional, basicamente seguindo o que Poul Klausen fez no livro dele, *"Java 6: JDBC and database applications"*  misturado ao uso do arquivo db.properties.
 
-</div> <!-- Fim do container -->
+Eis o conteúdo do nosso arquivo `db.properties`:
+
+<div class="codigo">
+
+    usuario=root
+    senha=root
+    dburl=jdbc:mysql://localhost:3306/teste
+    useSSL=false
+
+</div>
+
+Nosso arquivo Java será assim:
+
+<div class="codigo">
+
+    import java.io.FileInputStream;
+    import java.io.IOException;
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    import java.sql.ResultSet;
+    import java.sql.SQLException;
+    import java.sql.Statement;
+    import java.util.Properties;
+    
+    public class Main {
+    
+        public static void main(String[] args) {
+            Connection conn = null;
+            Statement stmt = null;
+            String url = null;
+            String usuario = null;
+            String senha = null;
+    
+            try (FileInputStream arquivoDB = new FileInputStream("db.properties")) {
+                Properties pros = new Properties();
+                pros.load(arquivoDB);
+        	
+                url = pros.getProperty("dburl");
+                usuario = pros.getProperty("usuario");
+                senha = pros.getProperty("senha");
+            }
+            catch(IOException e) {
+                System.out.println(e.getMessage());
+            }
+    
+            try {
+                conn = DriverManager.getConnection(url, usuario, senha);
+                stmt = conn.createStatement();
+                ResultSet res = stmt.executeQuery("SELECT * FROM funcionarios");
+        	
+                res.next();
+                System.out.print(res.getString("Nome"));
+            }
+            catch(SQLException e) {
+                System.out.println(e.getMessage());
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+            finally {
+                try {
+                    if (stmt != null) stmt.close();
+                    if (conn != null) conn.close();
+                }
+        	        catch(SQLException e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+    }
+
+</div>
+
+Um último exemplo onde colocamos os detalhes de conexão em um arquivo separado e deixamos o arquivo principal mais enxuto:
+
+Manteremos o arquivo `db.properties`. Logo a seguir temos o arquivo `JDBCUtil.java`:
+
+<div class="codigo">
+
+    import java.io.FileInputStream;
+    import java.io.IOException;
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    import java.sql.SQLException;
+    import java.util.Properties;
+    
+    public class JDBCUtil {
+        public static Connection conectar() throws SQLException {
+            Connection con = null;
+		
+            try (FileInputStream arquivoDB = new FileInputStream("db.properties")) {
+                Properties pros = new Properties();
+                pros.load(arquivoDB);
+    	
+                String url = pros.getProperty("dburl");
+                String usuario = pros.getProperty("usuario");
+                String senha = pros.getProperty("senha");
+            
+                con = DriverManager.getConnection(url, usuario, senha);
+            }
+            catch(IOException e) {
+                System.out.println(e.getMessage());
+            }
+		
+            return con;
+        }
+    }
+
+</div>
+
+E o arquivo principal `Main.class`:
+
+<div class="codigo">
+
+    import java.sql.Connection;
+    import java.sql.ResultSet;
+    import java.sql.SQLException;
+    import java.sql.Statement;
+
+    public class Main {
+
+        public static void main(String[] args) {
+        
+            try(Connection con = JDBCUtil.conectar()) {
+                Statement stmt = con.createStatement();
+                ResultSet res = stmt.executeQuery("SELECT * FROM funcionarios");
+        
+                res.next();
+                System.out.print(res.getString("Nome"));
+            }
+            catch(SQLException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+</div>
