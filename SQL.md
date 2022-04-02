@@ -115,7 +115,7 @@ A propósito, caso a senha já tenha sido definida, o comando será:
 
 Há três formas de (re)inciar/parar o servidor MySQL no Linux.
 
-Abra o temrinal e use o comando abaixo:
+Abra o terminal e use o comando abaixo:
 
     sudo service mysqld start
 
