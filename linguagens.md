@@ -4,7 +4,7 @@
 
 	* [Hello World](#linguagens_helloworld)
 
-	* [Arrays](#linguagens_arrays)
+	* [Arranjos](#linguagens_arrays)
 
 	* [Funções](#linguagens_functions)
 
