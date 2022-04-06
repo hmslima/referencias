@@ -16,6 +16,12 @@
 
 	* [db.properties](#jdbc_dbproperties)
 
+	* [Recuperação de dados](#jdbc_recuperacaoDados)
+
+	* [Inserção de dados](#jdbc_insercaoDados)
+
+		* [Statement x PreparedStatement](#jdbc_insercaoDados_statement)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -84,7 +90,10 @@ O código é bem simplesinho.
             
             System.out.print(rs.getString("Nome"));
             
-            con.close(); // Fechamento da conexão
+            // Fechamentos
+            rs.close();
+            st.close();
+            con.close();
         }
     }
 
@@ -160,6 +169,8 @@ Agora vamos ver todos os dados da tabela **funcionarios**:
                 System.out.println(rs.getFloat(6));
             }
             
+            rs.close();
+            st.close();
             con.close();
         }
     }
@@ -209,7 +220,8 @@ Vamos fazer um código com `try` `catch`:
                     System.out.print(" | ");
                     System.out.println(rs.getFloat("Salario"));
                 }
-                
+                rs.close();
+                st.close();
                 con.close();
             }
             catch(SQLException e) {
@@ -362,3 +374,128 @@ E o arquivo principal `Main.class`:
     }
 
 </div>
+
+## Recuperação de dados<span id="jdbc_recuperacaoDados"></span>
+
+Você já conheceu o `next()` que usamos com a instância de `ResultSet`, vamos conhecer todos:
+
+* **first() -** Move para a posição 1, se houver
+
+* **beforeFirst() -** Move para a posição 0. Mas lembre-se que dados reais começam com 1
+
+* **next() -** Move para o próximo , retorna `false se estiver no último. Ótimo para trabahar em loops
+
+* <strong>absolute(<i>int</i>) -</strong> Move para uma *dada* posição.
+
+Mas se você tentar todos esses com excerção de next(), teremos uma mensagem de erro:
+
+> Operation not allowed for a result set of type ResultSet.TYPE_FORWARD_ONLY
+
+Isso porque, por padrão, o `ResultSet` é do tipo `TYPE_FORWARD_ONLY`, em que você só pode se mover para frente no conjunto de resultados, não para trás. Para solucionar esse problema, adicione os parâmetros `ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY` no momento que você cria seu *Statement*.
+
+    [...]
+    Statement st = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+    [...]
+
+## Inserção de dados<span id="jdbc_insercaoDados"></span>
+
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    import java.sql.PreparedStatement;
+    
+    public class Main {
+    
+        public static void main(String[] args) throws Exception {
+    
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/teste?useSSL=false&serverTimezone=UTC", "root", "root"); // Conexão, os parâmetros são a url, o usuário e a senha
+            
+            // Observe que agora estamos usando o PreparedStatement em vez do Statement
+            PreparedStatement st = con.prepareStatement("INSERT INTO funcionarios "
+            		+ "(Id, Nome, Sobrenome, Genero, email, Salario, Departamento)"
+            		+ "VALUES(Null, ?, ?, ?, ?, ?, ?)");
+            
+            st.setString(1, "Diana"); // O 1 se refere à primeira interrogação
+            st.setString(2, "Prince"); // O 2 se refere à segunda interrogação. Você já entendeu
+            st.setString(3, "F");
+            st.setString(4, "diana@gmail.com");
+            st.setDouble(5, 3200.00);
+            st.setString(6, "Financeiro");
+            // Se fôssemos instanciar uma data, seria assim:
+            // st.setDate(7, new Java.sql.Date());
+            
+            int linhasALteradas = st.executeUpdate(); // Retorna quantas linhas foram alteradas
+            System.out.println("Foram alteradas " + linhasALteradas + " linhas."); // Só para a gente saber
+            
+            // Fechamentos
+            st.close();
+            con.close();
+        }
+    }
+
+Vamos aprimorar esse código:
+
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    import java.sql.PreparedStatement;
+    import java.sql.ResultSet;
+    import java.sql.Statement;
+    
+    public class Main {
+    
+        public static void main(String[] args) throws Exception {
+    
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            
+            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/teste?useSSL=false&serverTimezone=UTC", "root", "root"); // Conexão, os parâmetros são a url, o usuário e a senha
+            
+            PreparedStatement st = con.prepareStatement("INSERT INTO funcionarios "
+            		+ "(Id, Nome, Sobrenome, Genero, email, Salario, Departamento)"
+            		+ "VALUES(Null, ?, ?, ?, ?, ?, ?)",
+            		Statement.RETURN_GENERATED_KEYS);
+            
+            st.setString(1, "Carla"); // O 1 se refere à primeira interrogação. Mas observe que esse é um valor da SEGUNDA coluna, começa por 1 porque já defini o valor para Id, que no caso é Null
+            st.setString(2, "Smith"); // O 2 se refere à segunda interrogação.
+            st.setString(3, "F");
+            st.setString(4, "csmith@gmail.com");
+            st.setDouble(5, 4100.00);
+            st.setString(6, "Financeiro");
+            
+            int linhasALteradas = st.executeUpdate(); // Retorna quantas linhas foram alteradas
+            
+            if (linhasALteradas > 0) {
+            	ResultSet rs = st.getGeneratedKeys();
+            	while(rs.next()) {
+            		int id = rs.getInt(1);
+            		System.out.println("Funcionário " + id + " adicionado com sucesso.");
+            	}
+            }
+            else {
+            	System.out.println("Nenhuma linha foi afetada");
+            }
+            
+            // Fechamentos
+            st.close();
+            con.close();
+        }
+    }
+
+
+### Statement x PreparedStatement<span id="jdbc_insercaoDados_statement"></span>
+
+No exemplo passado, assim como será em alguns exemplos futuros, usamos `Statement`
+
+    [...]
+    Statement st = con.createStatement();
+    [...]
+
+Mas há outro modo:
+
+    PreparedStatement st = con.prepareStatement([...]);
+
+**Qual é a diferença?**
+
+O `createStatement()` cria um objeto Statement sobre uma String SQL sem parâmetros. Se você precisar usar o Statement uma ou dias vezes, o `createStatement()` é a melhor solução.
+
+O `PreparedStatement()` cria um objeto Statement sobre uma String SQL com parâmetros. Quando você executar a consulta SQL, o banco de dados preparará um plano de execução antes de executar a consulta e essa execução será posta em *cache* no banco de dados para uma futura execução. A vantagem é que a performance é melhor porque a execução é posta em chache

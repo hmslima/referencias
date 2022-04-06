@@ -24,7 +24,7 @@ O servidor Apache roda os arquivos que se encontram dentro da pasta `/opt/lampp/
 
 Crie a pasta onde você quer guardar seus arquivos. No meu exemplo, usarei o usuário fictício `carlos` e criarei a pasta ~/htdocs. Para não ter possíveis problemas, vamos mudar as permissões dessa pasta:
 
-    sudo chmod 777 /home/carlos/htdocs/
+    sudo chmod 777 -R /home/carlos/htdocs/
 
 *Adeque o código acima para o endereço que você escolher!* 
 
@@ -65,6 +65,12 @@ Mude o endereço `"/opt/lampp/htdocs"` para o local onde você quer guardar seus
 Salve e feche o arquivo e inicie o XAMPP pra ver se tudo deu certo:
 
     sudo /opt/lampp/lampp start
+
+Se por algum motivo você quiser abrir o painel de controle do XAMPP, use o comando abaixo:
+
+    sudo /opt/lampp/manager-linux-x64.run
+
+Assumo que você esteja usando a versão 64bit do Linux, se você estiver na versão 32bit, o comando é `sudo /opt/lampp/manager-linux.run`
 
 ## Considerações finais
 
