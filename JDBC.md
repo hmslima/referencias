@@ -115,6 +115,8 @@ Acho que a url `jdbc:mysql://localhost:3306/teste?useSSL=false&serverTimezone=UT
 
 Sobre esse `useSSL=false` em particular: SSL é um protocolo de criptografia que criptografa todos os dados usados na comunicaçã entre o servidor e o driver JDBC. Por padrão, `useSSL` é definidido como `true` em certas versões do MySQL. Estou comentando que possa ser que você receba uma mensagem de erro por causa do SSL e defini-lo como `false` é a solução.
 
+*A propósito, precisamos fechar a conexão (`con.close();`), haverá um vazamento de memória da conexão, então até que o servidor web seja desligado – memso que o usuário tenha saído – a conexão continuará ativa.*
+
 
 Agora vamos ver todos os dados da tabela **funcionarios**:
 
