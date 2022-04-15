@@ -1,3 +1,5 @@
+**Autor:** Henrique Matheus da Silva Lima
+
 # XAMPP
 
 XAMPP é um pacote que instala de forma simples os principais servidores web como Apache, banco de dados MariaDB e FTP junto com suporte a linguagens como PHP e Perl.

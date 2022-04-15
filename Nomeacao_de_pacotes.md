@@ -1,3 +1,5 @@
+**Autor:** Henrique Matheus da Silva Lima
+
 # Nomeação de pacotes
 
 Para evitar conflitos por conta dos nomes ds pacotes, existem algumas convenções para os nomes:

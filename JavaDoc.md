@@ -1,3 +1,5 @@
+**Autor:** Henrique Matheus da Silva Lima
+
 # Índice
 
 * [Introdução](#javadoc_intro)

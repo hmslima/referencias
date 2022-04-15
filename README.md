@@ -1,11 +1,25 @@
 # Referências por Henrique Matheus
 
-*This is the only paragraph that I am writing in English: this is just a quick reference of several technologies for me. It's not a big project, but it certainly can help other people.*
+*This is the only paragraph that I am writing in English: this is just a collection of quick references and mini-tutorials of several technologies for me. It's not a big project, but it certainly can help other people.*
 
-Olá, esta é uma coleção de tutoriais e referências que fiz para mim mesmo e que pode servir para outras pessoas. Os tutoriais foram feitos também com outras pessoas em mente, mas as referências são voltadas mais pra mim mesmo, mas posso aceitar contribuições para as referências também.
+Olá, esta é uma coleção de tutoriais e referências que fiz para mim mesmo. Embora este seja um projeto pessoal, tenho certeza que ele poderá ajudar outras pessoas, portanto posso aceitar contribuições se estas se adequarem ao estilo dos materiais.
 
-Sei que fazer tutoriais para si próprio parece estranho, mas gosto de estudar as coisas fazendo o meu próprio material, vou coletando informações de um lugar e de outro e vou construindo um tutorial que se adéque a minha metodologia de aprendizagem/ensino.
+Sei que fazer tutoriais para si próprio parece estranho, mas gosto de estudar as coisas fazendo o meu próprio material, vou coletando informações de um lugar e de outro e vou construindo um tutorial que se adéque a minha metodologia de aprendizagem/ensino. Apesar de eu curtir de fazer tutoriais, escrevi muitos desses materiais por pura necessidade, porque os livros, vídeos e tutoriais de blogs sempre tinham deficiência em algum ponto, o que me forçava a consultar diferentes materiais para entender um único tópico.
 
-O diferencial desses tutoriais é que aplico a tecnologia com o mínimo possível de dependências. Por exemplo, em vez de usar um facilitador como MySQL Workbench para lidar com meus bancos de dados em MySQL, prefiro usar o terminal. Se realizo a conexão do JDBC com o banco de dados, prefiro escrever o menor número possível de linhas de código para que, quem estiver lendo, saiba o que ele ou ela necessita para fazer o trabalho, mas depois desenvolvo o código para que este se adéque às boas práticas.
+Já aviso que você não encontrará aqui materiais completos. Sim, eles são um grande ponto de partida ou bons refrescadores de memória *(por exemplo: quando fico muito tempo no Java, preciso de algo para refrescar minha memória de como mexer com o Node.js)*, mas eles não te transformarão num ninja nas rtecnologias que eles abordam, mas ouso dizer que são um excelente **ponto de partida**.
 
-Curtiu? Cada tutorial está em seu respectivo arquivo .md, aceito contribuições *(assim você está ME ajudando também)* e colocarei seu nome na parte de contribuição ou até mesmo te atribuirei como co-autor(a) a depender da quantidade e qualidade das contribuições.
+O diferencial desses tutoriais é que aplico a tecnologia com o **mínimo possível de dependências** e com a maior **simplicidade**. Por exemplo, em vez de usar um facilitador como MySQL Workbench para lidar com meus bancos de dados em MySQL, prefiro usar o terminal. Se realizo a conexão do JDBC com o banco de dados, prefiro escrever o menor número possível de linhas de código para que, quem estiver lendo, saiba o que ele ou ela necessita para fazer o trabalho, mas depois desenvolvo o código para que este se adéque às boas práticas.
+
+Complementando o que foi dito no parágrafo anterior, uma coisa que me irrita em muitos dos materiais didáticos que vejo é que muitas vezes eles não te explicam pra que serve essa ou aquela linha de código, é esperado que você copie aquele código e é isso. Outro problema é quando enchem o código – lembrando que me refiro ao código usado para fins didáticos – de funcionalidades “““superfluas”””, que apesar de terem utilidade no mundo real, só confundirão o(a) aluno(a).
+
+Curtiu? Cada tutorial está em seu respectivo arquivo .md e, como eu havia dito, aceito contribuições *(assim você estará ME ajudando também)* e colocarei seu nome na parte de contribuição ou até mesmo te atribuirei como co-autor(a) a depender da quantidade e qualidade das contribuições.
+
+<hr>
+
+**Minhas redes sociais**
+
+**LinkedIn:** [https://www.linkedin.com/in/henrique-matheus-da-silva-lima/](https://www.linkedin.com/in/henrique-matheus-da-silva-lima/)
+
+**Twitter:** [https://twitter.com/hmslima_](https://twitter.com/hmslima_)
+
+Se você tiver qualquer dúvida, sugestão ou até mesmo correção, mande lá nas [Issues](https://github.com/hmslima/referencias/issues).

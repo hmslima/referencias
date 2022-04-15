@@ -1,3 +1,5 @@
+**Autor:** Henrique Matheus da Silva Lima
+
 # índice
 
 * [Comparação entre linguagens de programação](#linguagens)
