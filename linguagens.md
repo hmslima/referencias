@@ -14,6 +14,8 @@
 
 # Introdução
 
+Por favor, leia o [README](README.md).
+
 ***Primeiramente, preciso deixar uma coisa clara:*** *nenhum desses códigos é meu, copiei tudo de todos os cantos da internet. Se você ver o seu código aqui e quiser que eu o retire, avise-me que farei isso sem demora.*
 
 Este documento serve apenas para refrescar a minha memória, quando trabalhamos com muitas linguagens, é comum esquecermos certos detalhes da sintaxe ou usar as regras de uma sintaxe em outra linguagem.

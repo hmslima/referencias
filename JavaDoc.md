@@ -2,15 +2,19 @@
 
 # Índice
 
-* [Introdução](#javadoc_intro)
+* [Introdução](#intro)
+
+* [JavaDoc](#javadoc)
 
 * [Uso](#javadoc_uso)
 
 * [Geração da documentação](#javadoc_gerar)
 
-# JavaDoc<span id="javadoc"></span>
+# Introdução<span id="intro"></span>
 
-## Introdução<span id="javadoc_intro"></span>
+Leia o [README](README.md).
+
+# JavaDoc<span id="javadoc"></span>
 
 
 JavaDoc é uma ferramenta de geração de documentos em HTML para a linguagem Java, ou seja, ele gera uma API documentada por meio de comentários no meio do código.

@@ -4,6 +4,8 @@
 
 * [Introdução](#intro)
 
+* [Type casting](#typecasting)
+
 * [Type casting com classes](#typecasting)
 
 	* [Upcasting](#typecasting_upcasting)
@@ -15,6 +17,10 @@
 	* [Qual é o propósito do upcasting e downcasting?](#typecasting_proposito)
 
 # Introdução<span id="intro"></span>
+
+Leia o [README](README.md).
+
+# Type casting<span id="typecasting"></span>
 
 *Type casting* é o processo de conversão de um tipo de dado em outro.
 

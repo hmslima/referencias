@@ -4,8 +4,6 @@
 
 * [Introdução](#intro)
 
-	* [O básico do básico](#intro_basico)
-
 * [Banco de dados SQL](#sql)
 
 	* [Instalação no Windows](#sql_instWindows)
@@ -24,7 +22,7 @@
 
 	* [Configuração de usuário](#sql_configUsuario)
 
-	* [Comandos básicos](#sql_comandosBasicos)
+	* [Comandos e conceitos básicos](#sql_comandosBasicos)
 
 		* [Bancos de dados](#sql_comandosBasicos_banco)
 

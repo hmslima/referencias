@@ -2,28 +2,57 @@
 
 # índice
 
+* [Introdução](#intro)
+
 * [Node.js](#nodejs)
 
 	* [Hello World](#nodejs_primeiroservidor)
 
-	* [Um "Hello World" mais completo](#nodejs_primeiroservidor_maiscompleto)
+		* [Um "Hello World" mais completo](#nodejs_primeiroservidor_maiscompleto)
 
-	* [Servindo HTML para o cliente](#nodejs_primeiroservidor_html)
+		* [Servindo HTML para o cliente](#nodejs_primeiroservidor_html)
 
-	* [Servindo JSON para o cliente](#nodejs_primeiroservidor_json)
+		* [Servindo JSON para o cliente](#nodejs_primeiroservidor_json)
 
-* [Nossos próprios módulos](#nodejs_nmodulos)
+	* [Nossos próprios módulos](#nodejs_nmodulos)
 
-* [Instalação de módulos com o NPM](#nodejs_npm)
+	* [Instalação de módulos com o NPM](#nodejs_npm)
 
-* [Framework Express](#nodejs_express)
+	* [Framework Express](#nodejs_express)
+
+		* [View engine](#nodejs_express_viewengine)
+
+		* [app.use e public](#nodejs_express_usepublic)
+
+		* [params](#nodejs_express_params)
+
+	* [CRUD no MySQL](#nodejs_mysql)
+
+		* [Pelo pacote mysql](#nodejs_mysql_mysql)
+
+		* [Pelo pacote Sequelize](#nodejs_mysql_sequelize)
+
+			* [Criação de tabelas](#nodejs_mysql_sequelize_c)
+
+			* [Leitura de tabelas](#nodejs_mysql_sequelize_r)
+
+				* [Leitura de tabelas legadas](#nodejs_mysql_sequelize_r_l)
+
+			* [Atualização de tabelas](#nodejs_mysql_sequelize_u)
+
+			* [Deleção de tabelas](#nodejs_mysql_sequelize_d)
+
+			* [Queries](#nodejs_mysql_sequelize_queries)
+
+# Introdução<span id="intro"></span>
+
+Leia o [README](README.md).
 
 # Node.js<span id="nodejs"></span>
 
+Node.js é um software que permite rodar códigos JavaScript fora do navegador, um dos seus maiores usos é no *back-end* do lado do servidor.
 
-eeeeeeeeeeeeeeeeeeeee
-
-Acesse [este site](https://nodejs.org/) para fazer o download do Node.js. PPra quem usa Linux: mesmo que você tenha o Node.js nos repositórios de sua distro, prefira baixar a versão LTS mais recente que está presente no site para evitar conflitos com dependências que venhamos a baixar, é claro que esse conselho é desnecessário para quem usa distros *rolling release*.
+Acesse [este site](https://nodejs.org/) para fazer o download do Node.js. PPra quem usa Linux: mesmo que você tenha o Node.js nos repositórios de sua distro, prefira baixar a versão LTS mais recente que está presente no site para evita_expressr conflitos com dependências que venhamos a baixar, é claro que esse conselho é desnecessário para quem usa distros *rolling release*.
 
 Primeiro precisamos montar nosso arquivo `package.json`, ele é quem gerenciará as dependências do nosso projeto. Para criá-lo automarticamente, use o comando abaixo:
 
@@ -351,6 +380,8 @@ Por fim, temos a *flag* `--global`, esta em vez de instalar o módulo de forma l
 
 ## Nodemon
 
+[Website](https://nodemon.io/)
+
 Nodemon é uma ferramenta interessante. Ela funciona da seguinte forma, toda vez que modificamos o nosso projeto, o servidor é recarregado automaticamente, sem precisarmos ter que ficar desligando e ligando o servidor toda hora pra ver se as atualizações funcionaram.
 
 Instale o Nodemon ou como dependência...
@@ -368,6 +399,8 @@ Para executar seu aplicativo através do Nodemon, é só usar o comando abaixo:
 No meu caso aqui, usei o comando `nodemon index.js`.
 
 ## Framework Express<span id="nodejs_express"></span>
+
+[Website](https://expressjs.com)
 
 O Express é tão utilizado que há muitos desenvolvedores que literalmente não sabem usar o Node.js sem ele.
 
@@ -406,7 +439,7 @@ O nosso arquivo `index.js` ficará assim:
 
 *Observe que agora a mensagem "Olá mundo" é exibida perfeitamente*
 
-A vantagem desse framework é que o routing é muito fácil:
+A vantagem desse framework é que o *routing* é muito fácil:
 
     const express = require('express');
     const app = express();
@@ -420,3 +453,684 @@ A vantagem desse framework é que o routing é muito fácil:
     });
     
     app.listen(3000);
+
+### View engine<span id="nodejs_express_viewengine"></span>
+
+O Express pode renderizar arquivos de modelo. Mas para isso precisamos instalar um *view engine* que faça esse trabalho para nós. A boa *(ou má...)* notícia é que há vários, como EJS, PUG e Handlebars. Terei que escolher um para os nossos exemplos, mas aqui estão os sites de cada um deles:
+
+* [EJS](https://ejs.co/)
+
+* [PUG](https://pugjs.org/)
+
+* [Handlebars](https://handlebarsjs.com/)
+
+Terei escolher um e o felizardo será o EJS. Não tenho motivos técnicos para usar este em vez dos outros, o escolhi porque foi o que aprendi melhor e gostei.
+
+Primeiro, vamos instalar o EJS:
+
+    npm i ejs
+
+Crie a pasta `views`, ela é obrigatória.
+
+Dentro da pasta `views`, crie a pasta `pages` e ponha lá dentro o arquivo `index.ejs` *(isso mesmo, com a extesão ejs)*.
+
+Também dentro da pasta `views`, crie a pasta `partials` e ponha lá dentro os arquivos `head.ejs`, `header.ejs` e `footer.ejs`.
+
+Eis os conteúdos de cada arquivo:
+
+**views/partials/head.ejs**
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste</title>
+
+**views/partials/header.ejs**
+
+    <div class="menu">Início | Projetos | Contatos</div>
+
+**views/partials/footer.ejs**
+
+    © Copyright 2020 HMSLIMA
+
+**views/pages/index.ejs**
+
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <%- include('../partials/head'); %>
+    </head>
+    <body>
+        <header>
+            <%- include('../partials/header'); %>
+        </header>
+    
+        <p>Olá mundo!</p>
+    
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    </body>
+    </html>
+
+**index.js**
+
+    const express = require('express');
+    const ejs = require('ejs');
+    
+    const app = express();
+    
+    app.set('view engine', 'ejs');
+    
+    app.get('/', (req, res) => {
+        res.render("pages/index");
+    });
+    
+    app.listen(3000);
+
+Não tenho o que falar dos arquivos dentro da pasta `views/partials/` uma vez 	que eles contém o HTML básico que você já conhece.
+
+No arquivo `index.ejs`, temos as *tags* `<%- %>` onde colocamos nossos *includes*. Também não tem muito o que explicar, o `<%- include(); %>` insere um pedaço de HTML em outro arquivo HTML.
+
+Quanto ao arquivo `index.js`, a linha `const app = express();` cria uma aplicação Express para você.
+
+`app.set()` atribui um nome de configuração a um valor. No caso mexemos com a propriedade `view engine`, em que atribuimos a ela o valor `ejs`. Se, por exemplo, estivéssemos usando a tecnologia Handlebars, essa linha seria `app.set('view engine', 'hbs');`.
+
+O método `res.render()` renderiza um *view* e manda a *string* de HTML renderizada para o cliente. Esse método tem a senguinte sintaxe:
+
+    res.render(view [, locals] [, callback])
+
+* `locals`: objeto cujas propriedades definem as variáveis locais da view.
+
+* `callback`: função callback, que pode retornar um error ou a *string* renderizada.
+
+Vamos deixar nosso projeto mais interessante.
+
+**index.js**
+
+    const express = require('express');
+    const ejs = require('ejs');
+    
+    const app = express();
+    
+    app.set('view engine', 'ejs');
+    
+    app.get('/', (req, res) => {
+        res.render("pages/index", {nome: "João"}, (err, html) => {
+            res.send(html);
+        });
+    });
+    
+    app.listen(3000);
+
+**views/pages/index.ejs**
+
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <%- include('../partials/head'); %>
+    </head>
+    <body>
+        <header>
+            <%- include('../partials/header'); %>
+        </header>
+    
+        <p>Olá <%= nome %>!</p>
+    
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    </body>
+    </html>
+
+A mudança no arquivo `index.ejs` é mínima, a mudança foi apenas esta linha `<p>Olá <%= nome %>!</p>` onde adicionei uma variável por meio da *tag* `<%= %>`; preste atenção, a *tag* que insere uma variável é `<%= %>` enquanto a que insere um *include* é `<%- %>`, olhe direitinho que você notará a diferença.
+
+### app.use e public<span id="nodejs_express_usepublic"></span>
+
+Crie a pasta `public` *(na pasta principal do projeto mesmo)* e dentro desta pasta crie as pastas `css` e `js`. Ponha um arquivo css e um arquivo de scripts normal .js em suas respectivas pastas, pode ser qualquer um, mas eu usarei os [arquivos do Bootstrap](https://getbootstrap.com/) no meu exemplo.
+
+Também modifiquei o arquivo `views/partials/head.ejs` para que este ficasse assim:
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/bootstrap.js"></script>
+    <title>Teste</title>
+
+E nosso arquivo `index.js` ficará assim agora:
+
+    const express = require('express');
+    const ejs = require('ejs');
+    
+    const app = express();
+    
+    app.set('view engine', 'ejs');
+    app.use(express.static('public'));
+    
+    app.get('/', (req, res) => {
+        res.render("pages/index");
+    });
+    
+    app.listen(3000);
+
+Se você atualizar a pasta, só em olhar a fonte você reparará que o Bootstrap está em ação. Agora vamos tentar entender o que aconteceu:
+
+     app.use(express.static('public'));
+
+Temos duas coisas aqui, o `app.use()` e o `express.static()`. O `app.use()` monta uma função *[middleware](https://pt.wikipedia.org/wiki/Middleware)* específica. O `express.static()`, por sua vez, é uma função *middleware* do Express que serve arquivos estáticos, o parâmetro dessa função é a pasta onde estão os arquivos estáticos.
+
+Repare que, no monento quando colocamos os endereços dos arquivos .css e .js, eles foram...
+
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/bootstrap.js"></script>
+
+...em vez de:
+
+    <link rel="stylesheet" href="public/css/bootstrap.css">
+    <script src="public/js/bootstrap.js"></script>
+
+### params<span id="nodejs_express_params"></span>
+
+Crie um novo arquivo na pasta `views/pages`, vamos chamá-lo de `usuario.ejs`.
+
+**index.js**
+
+    const express = require('express');
+    const ejs = require('ejs');
+    
+    const app = express();
+    
+    app.set('view engine', 'ejs');
+    
+    app.get('/', (req, res) => {
+        res.render("pages/index");
+    });
+    
+    app.get('/usuario/:nome_id', (req, res) => {
+        let nome_id = req.params.nome_id;
+        res.render('pages/usuario', {nome_id: nome_id});
+    });
+    
+    app.listen(3000);
+
+*Aproveita e retira aquela tag `<%= nome %>` do arquivo `views/pages/index.ejs` para ele não causar mensagens de erro inesperadas para nós depois...*
+
+**views/pages/usuario.ejs**
+
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <%- include('../partials/head'); %>
+    </head>
+    <body>
+        <header>
+            <%- include('../partials/header'); %>
+        </header>
+    
+        <p>Olá <%= nome_id %>!</p>
+    
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    </body>
+    </html>
+
+Agora acesse os endereços abaixo:
+
+[http://localhost:3000/usuario/Thiago](http://localhost:3000/usuario/Thiago)
+
+[http://localhost:3000/usuario/Júlia](http://localhost:3000/usuario/Júlia)
+
+Acho que o código é bem explicativo.
+
+    app.get('/usuario/:nome_id', (req, res) => {
+
+Através dos dois pontos (`:`), definimos a palavra `nome_id` como parâmetro e "capturei" esse parâmetro por meio do método `req.params`.
+
+## CRUD no MySQL<span id="nodejs_mysql"></span>
+
+Para não perdermos tempo, usaremos a tabela `funcionarios` criada [neste tutorial de SQL](SQL.md).
+
+<hr>
+
+    CREATE DATABASE teste;
+
+<span></span>
+
+    USE teste;
+
+<span></span>
+    
+    CREATE TABLE funcionarios
+    (Id int NOT NULL AUTO_INCREMENT,
+    Nome varchar(255) NOT NULL,
+    Sobrenome varchar(255) NOT NULL,
+    Genero char(1) NOT NULL,
+    email varchar(255) NOT NULL,
+    Salario float(7,2) NOT NULL,
+    Departamento varchar(255) NOT NULL,
+    PRIMARY KEY (Id)
+    );
+
+<span></span>
+
+    INSERT INTO funcionarios VALUES(Null, "Mariana", "Cardoso", "F", "mariana@terra.com.br", 4000.00, "Financeiro");
+    INSERT INTO funcionarios VALUES(Null, "Thiago", "Silva", "M", "thiago@terra.com.br", 1500.00, "TI");
+    INSERT INTO funcionarios VALUES(Null, "Tião", "Trovão", "M", "danadinha@gmail.com.br", 2000.00, "TI");
+    INSERT INTO funcionarios VALUES(Null, "Iara", "Schmidt", "F", "schmidt@gmail.com.br", 4500.00, "Financeiro");
+    INSERT INTO funcionarios VALUES(Null, "Patrícia", "Oliveira", "F", "patioliveira@gmail.com.br", 8000.00, "Financeiro");
+    INSERT INTO funcionarios VALUES(Null, "Railton", "Carneiro", "M", "rai@hotmail.com.br", 3000.00, "TI");
+    INSERT INTO funcionarios VALUES(Null, "Pedro", "dos Santos", "M", "pedrao@hotmail.com.br", 12000.00, "TI");
+
+<hr>
+
+### Pelo pacote mysql<span id="nodejs_mysql_mysql"></span>
+
+[Website](https://www.npmjs.com/package/mysql)
+
+Instale o pacote `mysql`:
+
+    npm install mysql
+
+
+Como ficará nosso arquivo `index.js`:
+
+    const mysql = require('mysql');
+    
+    const conn = mysql.createConnection({
+        host: "127.0.0.1",
+        user: "root",
+        password: "root"
+    });
+    
+    conn.connect((err) => {
+        if (err) throw err;
+    
+        console.log("Conexão feita com sucesso!");
+    });
+
+    conn.end();
+
+*Não sei porque, mas quando eu definia `localhost` para `host`, dava errado pra mim. Estou falando isso porque muitos tutoriais usam a intrução `host: 'localhost'`...*
+
+No meu caso aqui, tanto o nome de usuário quanto a senha são "root", mas pode ser diferente para você, então veja como é para você.
+
+Todo método que você invoca, é enfileirado e executado em sequência. Você fecha a conexão por meio do método `end()`
+
+    const mysql = require('mysql');
+    
+    const conn = mysql.createConnection({
+        host: "127.0.0.1",
+        user: "root",
+        password: "root",
+        database: "teste"
+    });
+    
+    conn.connect();
+    
+    let comando_mysql = "SELECT * FROM funcionarios;";
+    
+    conn.query(comando_mysql, (erro, resultados) => {
+        if (erro) throw erro;
+        for (resultado of resultados) {
+            console.log(resultado);
+        }
+    })
+    
+    conn.end();
+
+Dentro do método `createConnection`, temos uma novidade, que é a seleção do banco de dados `teste` em `database: "teste"`.
+
+Por meio do método `.query`, podemos utilizar um comando MySQL.
+
+    const mysql = require('mysql');
+    
+    const conn = mysql.createConnection({
+        host: "127.0.0.1",
+        user: "root",
+        password: "root",
+        database: "teste"
+    });
+    
+    conn.connect();
+    
+    let comando_mysql = "SELECT * FROM funcionarios;";
+    
+    conn.query(comando_mysql, (erro, resultados) => {
+        if (erro) throw erro;
+        for (resultado of resultados) {
+            console.log(resultado);
+        }
+    })
+    
+    conn.end();
+
+Naturalmente que podemos usar mais de um comando:
+
+    const mysql = require('mysql');
+    
+    const conn = mysql.createConnection({
+        host: "127.0.0.1",
+        user: "root",
+        password: "root",
+        database: "teste"
+    });
+    
+    conn.connect();
+    
+    let comando_mysql = "SELECT * FROM funcionarios;";
+    let comando_mysql2 = "SELECT * FROM funcionarios WHERE Genero=\"F\";";
+    
+    conn.query(comando_mysql, (erro, resultados) => {
+        if (erro) throw erro;
+        for (resultado of resultados) {
+            console.log(resultado);
+        }
+        console.log("----------") // Só para separar os diferentes queries
+    })
+    
+    conn.query(comando_mysql2, (erro, resultados) => {
+        if (erro) throw erro;
+        for (resultado of resultados) {
+            console.log(resultado);
+        }
+    })
+    
+    conn.end();
+
+O trecho abaixo que é do código acima...
+
+    for (resultado of resultados) {
+        console.log(resultado);
+    }
+
+...está ali só para vermos os resultados, que é bom conveniente para um comando SQL do tipo `SELECT *`, mas com esse código aí você pode fazer qualquer coisa com seu banco de dados SQL como criação, leitura, atualização e deleção de dados.
+
+### Pelo pacote Sequelize<span id="nodejs_mysql_sequelize"></span>
+
+[Website](https://sequelize.org/)
+
+Instale o pacote `sequelize`:
+
+    npm i sequelize
+
+O Squelize também exigirá a instalação manual do módulo referente ao banco de dados que você for usar: 
+
+* PostgreSQL: `pg` `pg-hstore`
+
+* MySQL: `mysql2`
+
+* MariaDB: `mariadb`
+
+* SQLite: `sqlite3`
+
+* Microsoft SQL Server: `tedious`
+
+Eis o nosso código:
+
+    const { Sequelize } = require('sequelize');
+    
+    const conn = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    (async function(){
+        try {
+            await conn.authenticate();
+            console.log('A conexão foi estabelecida com sucesso.');
+            conn.close();
+        } catch (error) {
+            console.error('Não foi possível estabelecer uma conexão com o banco de dados:', error);
+        }
+    }())
+
+Os parâmetros de `Sequelize()` são:
+
+    Sequelize('<banco_de_dados>', '<usuário>', '<senha>', {
+        host: '<>',
+        dialect: '<>'
+    });
+
+O `dialect` pode ser *'mysql'*, *'mariadb'*, *'postgres'* ou *'mssql'*.
+
+Na hora de autenticar a conexão *(`.authenticate()`)*, precisamos usar a palavra chave `await` porque a conexão pode ser fechada *(`.close()`)* antes mesmo de ser autenticada, o que causará erros.
+
+#### Criação de tabelas<span id="nodejs_mysql_sequelize_c"></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync();
+    })();
+
+* `sequelize.define()`: define um novo modelo, que representa uma tabela no banco de dados.
+
+* `sync()`: cria uma tabela se ela não existir e faz nada se ele já existir. A seguir vamos ver outras variações desse método:
+
+	* `.sync({ force: true })`: cria uma nova tabela, deletando a anterior com mesmo nome se esta existir
+
+	* `.sync({ alter: true })`: checa a tabela atual *(quais colunas existem, os tipos de dados...)* e realiza as mudanças necessárias na tabela para que esta se adeque ao novo modelo.
+
+* Eu creio que o resto seja bem auto-informativo. Se você, por exemplo, quiser saber quais são os tipos de dados possíveis neste ou naquele sistema de banco de dados, sugiro que você consulte a documentação presente no site.
+
+O código acima faz o mesmo que o comando MySQL abaixo:
+
+    CREATE TABLE IF NOT EXISTS `Usuarios` (`id` INTEGER NOT NULL auto_increment , `Nome` VARCHAR(255) NOT NULL, `email` VARCHAR(255) NOT NULL, `Salario` DOUBLE PRECISION NOT NULL, `createdAt` DATETIME NOT NULL, `updatedAt` DATETIME NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB;
+
+Repare que ele também criou a coluna `id` automaticamente pra nós, vejamos os detalhes dessa tabela:
+
+    +-----------+--------------+------+-----+---------+----------------+
+    | Field     | Type         | Null | Key | Default | Extra          |
+    +-----------+--------------+------+-----+---------+----------------+
+    | id        | int(11)      | NO   | PRI | NULL    | auto_increment |
+    | Nome      | varchar(255) | NO   |     | NULL    |                |
+    | email     | varchar(255) | NO   |     | NULL    |                |
+    | Salario   | double       | NO   |     | NULL    |                |
+    | createdAt | datetime     | NO   |     | NULL    |                |
+    | updatedAt | datetime     | NO   |     | NULL    |                |
+    +-----------+--------------+------+-----+---------+----------------+
+
+Há outra maneira de criar uma tabela que é por meio da extenção da classe `Model` do Sequelize.
+
+    const { Sequelize, DataTypes, Model } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    class Usuario extends Model {}
+    
+    Usuario.init({
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    }, {
+        sequelize,
+        modelName: 'Usuario'
+    });
+    
+    (async () => {
+        await Usuario.sync();
+    })();
+
+Observe que no momento que importo o módulo `sequelize`, também peço pela classe `Model`:
+
+    const { Sequelize, DataTypes, Model } = require('sequelize');
+
+Saiba que, internamente, `sequelize.define` chama `odel.init`, portanto ambos são equivalente.
+
+    sequelize,
+    modelName: 'Usuario'
+
+Essa linha `sequelize,` logo acima passa a instância da conexão enquanto `modelName:` escolhe o nome do modelo.
+
+#### Leitura de tabelas<span id="nodejs_mysql_sequelize_r"></span>
+
+Não tem muito o que falar aqui, o código seria basicamente o mesmo da criação de uma tabela; se você manter o `.sync()` que impede a deleção/modificação da tabela já existente, você não terá problemas.
+
+##### Leitura de tabelas legadas<span id="nodejs_mysql_sequelize_r_l"></span>
+
+E se estivermos lidando com uma tabela antiga? Primeiro definimos essa tabela como se você estivesse criando uma nova. Vejamos a tabela `funcionarios` que já temos em mãos:
+
+    +--------------+--------------+------+-----+---------+----------------+
+    | Field        | Type         | Null | Key | Default | Extra          |
+    +--------------+--------------+------+-----+---------+----------------+
+    | Id           | int(11)      | NO   | PRI | NULL    | auto_increment |
+    | Nome         | varchar(255) | NO   |     | NULL    |                |
+    | Sobrenome    | varchar(255) | NO   |     | NULL    |                |
+    | Genero       | char(1)      | NO   |     | NULL    |                |
+    | email        | varchar(255) | NO   |     | NULL    |                |
+    | Salario      | float(7,2)   | NO   |     | NULL    |                |
+    | Departamento | varchar(255) | NO   |     | NULL    |                |
+    +--------------+--------------+------+-----+---------+----------------+
+
+Depois você precisa ter em mente que o próprio Sequelize, por padrão, cria tabelas como a *primary key* `id` e as variáveis "*timestamp*" `createdAt` e `updatedAt`.
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Funcionarios = sequelize.define("funcionarios", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Sobrenome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Genero: {
+            type: DataTypes.CHAR(1),
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.FLOAT(7, 2),
+            allowNull: false
+        },
+        Departamento: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+    }, {
+        timestamps: false
+    });
+    
+    (async () => {
+        await Funcionarios.sync();
+    })();
+    
+    // Vamos usar uns queries pra testar se tudo deu realmente certo
+    // Você não precisa entender o trecho de código abaixo agora
+    (async () => {
+        const funcionarios = await Funcionarios.findAll();
+        console.log("Todos os funcionarios:", JSON.stringify(funcionarios, null, 2));
+    })();
+
+Primeiro repare que não precisei definir o `id` porque o próprio Sequelize faz isso. O mais interessante é esse código aqui:
+
+    {
+        timestamps: false
+    });
+
+Se não adicione esse trecho de código, o Sequelize vai procurar pela colunas `createdAt` e `updatedAt` e não as encontrará, o que resultará em erro. A linha `timestamps: false` avisa para não adicionar as colunas `createdAt` e `updatedAt`. Veja com mais detalhes:
+
+* `timestamps: false`: não adicione os atributos "*timestamp*", que são `createdAt` e `updatedAt`
+
+* `createdAt: false`: não adicione o atributo `createdAt`
+
+* `updatedAt: false`: não adicione o atributo `updatedAt`
+
+#### Atualização de tabelas<span id="nodejs_mysql_sequelize_u"></span>
+
+É só usar `.sync({ alter: true })`.
+
+Vejamos um exemplo em que deleto a coluna `email` da tabela `Usuarios` e ainda mudo o tipo de `Salario` de *double* para inteiro:
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.INTEGER,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync({ alter: true });
+    })();
+
+#### Deleção de tabelas<span id="nodejs_mysql_sequelize_d"></span>
+
+Trocamos a linha...
+
+    Usuario.sync();
+
+...pela linha: 
+
+    Usuario.drop();
+
+<span></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario");
+    
+    (async () => {
+        await Usuario.drop();
+    })();
+
+#### Queries<span id="nodejs_mysql_sequelize_queries"></span>
+

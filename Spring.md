@@ -2,6 +2,8 @@
 
 # Índice
 
+* [Introdução](#intro)
+
 * [Spring](#spring)
 
 	* [Criação do projeto](#spring_criacaoprojeto)
@@ -13,6 +15,11 @@
 	* [Repositórios](#spring_repository)
 
 	* [Camada de serviço](#spring_servico)
+
+
+# Introdução<span id="intro"></span>
+
+Leia o [README](README.md).
 
 # Spring<span id="spring"></span>
 

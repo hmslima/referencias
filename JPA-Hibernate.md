@@ -2,6 +2,8 @@
 
 # Índice
 
+* [Introdução](#intro)
+
 * [JPA e Hibernate](#jpa)
 
 	* [Configurações](#jpa_config)
@@ -19,6 +21,10 @@
 	* [Recuperação de dados](#jpa_recuperacao)
 
 	* [Entidade monitorada](#jpa_monitorada)
+
+# Introdução<span id="intro"></span>
+
+Leia o [README](README.md).
 
 # JPA e Hibernate<span id="jpa"></span>
 

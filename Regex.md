@@ -2,7 +2,13 @@
 
 # Índice
 
+* [Introdução](#intro)
+
 * [RegEx](#regex)
+
+# Introdução<span id="intro"></span>
+
+Leia o [README](README.md).
 
 # RegEx<span id="regex"></span>
 
