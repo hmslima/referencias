@@ -20,6 +20,8 @@
 
 	* [Framework Express](#nodejs_express)
 
+		* [Roteamento](#nodejs_express_roteamento)
+
 		* [View engine](#nodejs_express_viewengine)
 
 		* [app.use e public](#nodejs_express_usepublic)
@@ -44,6 +46,22 @@
 
 			* [Queries](#nodejs_mysql_sequelize_queries)
 
+				* [Insert](#nodejs_mysql_sequelize_queries_insert)
+
+				* [Select](#nodejs_mysql_sequelize_queries_select)
+
+				* [Where](#nodejs_mysql_sequelize_queries_where)
+
+				* [Update](#nodejs_mysql_sequelize_queries_update)
+
+				* [Delete](#nodejs_mysql_sequelize_queries_delete)
+
+				* [Ordenamento](#nodejs_mysql_sequelize_queries_ordenamento)
+
+	* [Projeto: Lista de Tarefas](#nodejs_projetotarefas)
+
+	* [Conclusão](#nodejs_conclusao)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -63,7 +81,7 @@ Você verá uma série de perguntas, você pode deixar tudo sem responder sem qu
 Abra seu arquivo `pacjage.json`, ele estará mais ou menos assim:
 
     {
-      "name": "nodejs",
+      "name": "nome_do_projeto",
       "version": "1.0.0",
       "description": "",
       "main": "index.js",
@@ -71,11 +89,7 @@ Abra seu arquivo `pacjage.json`, ele estará mais ou menos assim:
         "test": "echo \"Error: no test specified\" && exit 1"
       },
       "author": "",
-      "license": "ISC",
-      "dependencies": {
-        "express": "^4.17.3",
-        "http-status-codes": "^2.2.0"
-      }
+      "license": "ISC"
     }
 
 É interessante que seu arquivo .js principal esteja com o nome indicado por `"main":`, que no caso aqui é `index.js`, mas poderia ser `main.js.`
@@ -424,6 +438,10 @@ Se você olhar o arquivo `packages.json`, você o verá nas dependências:
         "express": "^4.17.3"
       }
     }
+
+### Roteamento<span id="nodejs_express_roteamento"></span>
+
+Vamos aprender sobre `.get()` e `.post()`.
 
 O nosso arquivo `index.js` ficará assim:
 
@@ -1000,7 +1018,7 @@ Essa linha `sequelize,` logo acima passa a instância da conexão enquanto `mode
 
 Não tem muito o que falar aqui, o código seria basicamente o mesmo da criação de uma tabela; se você manter o `.sync()` que impede a deleção/modificação da tabela já existente, você não terá problemas.
 
-##### Leitura de tabelas legadas<span id="nodejs_mysql_sequelize_r_l"></span>
+##### LEITURA DE TABELAS LEGADAS<span id="nodejs_mysql_sequelize_r_l"></span>
 
 E se estivermos lidando com uma tabela antiga? Primeiro definimos essa tabela como se você estivesse criando uma nova. Vejamos a tabela `funcionarios` que já temos em mãos:
 
@@ -1134,3 +1152,557 @@ Trocamos a linha...
 
 #### Queries<span id="nodejs_mysql_sequelize_queries"></span>
 
+##### INSERT<span id="nodejs_mysql_sequelize_queries_insert"></span>
+
+Vamos inserir 4 usuários:
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuario = await Usuario.create({ Nome: "Marcelo Ferreira", email: "marcelo@terra.com.br", Salario: 3000.00 });
+            })();
+    
+            (async () => {
+                const usuario = await Usuario.create({ Nome: "Tatiana Castro", email: "tati@bol.com.br", Salario: 2200.00 });
+            })();
+    
+            (async () => {
+                const usuario = await Usuario.create({ Nome: "Eliza Camos", email: "elcampos@gmail.com.br", Salario: 4000.00 });
+            })();
+    
+            (async () => {
+                const usuario = await Usuario.create({ Nome: "Thiago Vasconcelos", email: "vasconcelos@gmail.com.br", Salario: 1500.00 });
+            })();
+        });
+    })();
+
+##### SELECT<span id="nodejs_mysql_sequelize_queries_select"></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuarios = await Usuario.findAll();
+                console.log("Todos os usuários:", JSON.stringify(usuarios, null, 2));
+            })();
+        });
+    })();
+
+<hr>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuarios = await Usuario.findAll({attributes: ['Nome', 'email']}); // Seleciona apenas os atributos "Nome" e "email"
+                console.log("Todos os usuários:", JSON.stringify(usuarios, null, 2));
+            })();
+        });
+    })();
+
+##### WHERE<span id="nodejs_mysql_sequelize_queries_where"></span>
+
+Exibe os usuários com salário superior a 2500.
+
+    const { Sequelize, DataTypes, Op } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuarios = await Usuario.findAll({
+                    where: {
+                        Salario: {
+                            [Op.gte]: 2500.00
+                        }
+                    }
+                });
+                console.log(JSON.stringify(usuarios, null, 2));
+            })();
+        });
+    })();
+
+Observe que na importação, também peguei o `Op`. Há várias operações que você pode fazer com o `Op`, por exemplo:
+
+* `[Op.eq]: 12`: = 12
+
+* `[Op.gt]: 10`: > 10
+
+* `[Op.lte]: 8`: < 8
+
+* *Veja o resto no site*
+
+##### UPDATE<span id="nodejs_mysql_sequelize_queries_update"></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuario = await Usuario.update({ Nome: "Sérgio Smith"}, {
+                    where: {
+                        id: 1
+                    }
+                });
+            })();
+        });
+    })();
+
+##### DELETE<span id="nodejs_mysql_sequelize_queries_delete"></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuario = await Usuario.destroy({
+                    where: {
+                        id: 1
+                    }
+                });
+            })();
+        });
+    })();
+
+##### ORDENAMENTO<span id="nodejs_mysql_sequelize_queries_ordenamento"></span>
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const sequelize = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    const Usuario = sequelize.define("Usuario", {
+        Nome: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Salario: {
+            type: DataTypes.DOUBLE,
+            allowNull: false
+        }
+    });
+    
+    (async () => {
+        await Usuario.sync().then(() => {
+            (async () => {
+                const usuarios = await Usuario.findAll({
+                    order: [
+                        ['Nome', 'DESC'] // DESC é decrescente, pra crescente (que é o padrão) seria ASC
+                    ]
+                }).then((usuarios) => {
+                    console.log(JSON.stringify(usuarios, null, 2));
+                })
+            })();
+        });
+    })();
+
+## Projeto: Lista de Tarefas<span id="nodejs_projetotarefas"></span>
+
+Esse é um projetinho bem simples que consiste em criar uma lista de tarefas. Através deles aprenderemos mais alguns coisas básicas:
+
+**views/partials/head.ejs**
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <title>Lista de Tarefas</title>
+
+**views/partials/header.ejs**
+
+    <h1>Lista de Tarefas</h1>
+
+**views/partials/footer.ejs**
+
+    © Copyright 2020
+
+**views/pages/index.ejs**
+
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <%- include('../partials/head'); %>
+    </head>
+    <body>
+        <header>
+            <%- include('../partials/header'); %>
+        </header>
+    
+        <p><a class="btn btn-primary" href="tarefa">Clique aqui para adicionar uma nova tarefa</a></p>.
+    
+        <hr>
+    
+        <% tarefas.forEach(tarefa => { %>
+            <br>
+            <div class="card">
+                <div class="card-header">
+                    <h3><%= tarefa.Titulo %></h3>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <td>
+                                <%= tarefa.Descricao %>
+                            </td>
+                            <td style="width: 5rem;">
+                                <%= tarefa.Data %>
+                            </td>
+                            <td style="width: 4rem;">
+                                <form method="POST" action="/deletartarefa" style="display: inline;" onsubmit="confirmarDelecao(event, this)">
+                                    <input type="hidden" name="id" value="<%= tarefa.id %>">
+                                    <button class="btn btn-danger">Deletar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        <% }); %>
+    
+        
+    
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    
+        <script>
+            function confirmarDelecao(event, form) {
+                event.preventDefault();
+                let decision = confirm("Você realmente quer deletar esta tarefa?");
+                if (decision) {
+                    form.submit();
+                }
+            }
+        </script>
+    </body>
+    </html>
+
+**views/pages/tarefa.ejs**
+
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <%- include('../partials/head'); %>
+    </head>
+    <body>
+        <header>
+            <%- include('../partials/header'); %>
+        </header>
+    
+        <div class="card">
+            <div class="card-hearder">
+                Criar Tarefa
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/salvartarefa">
+                    <label>Título</label>
+                    <input type="text" placeholder="Título" class="form-control" name="titulo">
+                    <label>Descrição</label>
+                    <textarea placeholder="Descreva sua tarefa aqui" class="form-control" name="descricao"></textarea>
+                    <label>Data</label>
+                    <input type="date" class="form-control" name="data">
+                    <br>
+                    <button class="btn btn-success">Enviar tarefa</button>
+                </form>
+            </div>
+        </div>
+    
+        <footer>
+            <%- include('../partials/footer'); %>
+        </footer>
+    </body>
+    </html>
+
+**database/database.js**
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    
+    const connection = new Sequelize('teste', 'root', 'root', {
+        host: '127.0.0.1',
+        dialect: 'mysql'
+    });
+    
+    module.exports = connection;
+
+**public/css/bootstrap.css**
+
+Baixe o arquivo .css do Bootstrap [no site do projeto](https://getbootstrap.com/).
+
+**tarefas/Tarefa.js**
+
+    const { Sequelize, DataTypes } = require('sequelize');
+    const connection = require('../database/database');
+    
+    const Tarefa = connection.define("Tarefa", {
+        Titulo: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Descricao: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        Data: {
+            type: DataTypes.DATEONLY,
+            allowNull: false
+        }
+    });
+    
+    Tarefa.sync().then(() => {});
+    
+    module.exports = Tarefa;
+
+**tarefas/TarefaController.js**
+
+    const express = require('express');
+    const Tarefa = require ('./Tarefa');
+    
+    const router = express.Router();
+    
+    router.get('/tarefa', (req, res) => {
+        res.render('pages/tarefa');
+    });
+    
+    router.post('/salvartarefa', (req, res) => {
+        let titulo = req.body.titulo;
+        let descricao = req.body.descricao;
+        let data = req.body.data;
+    
+        Tarefa.create({
+            Titulo: titulo,
+            Descricao: descricao,
+            Data: data
+        }).then(() => {
+            res.redirect('/');
+        });
+    });
+    
+    router.post('/deletartarefa', (req, res) => {
+        let id = req.body.id;
+    
+        if (id != undefined) {
+            if (!isNaN(id)) {
+                Tarefa.destroy({
+                    where: {id: id}
+                })
+                .then(() => {
+                    res.redirect('/');
+                });
+            }
+            else {
+                res.redirect('/');
+            }
+        }
+        else {
+            res.redirect('/');
+        }
+    });
+    
+    module.exports = router;
+
+**index.js**
+
+    const express = require('express');
+    const ejs = require('ejs');
+    
+    const connection = require ('./database/database');
+    
+    const tarefaController = require ('./tarefas/TarefaController');
+    
+    const Tarefa = require ('./tarefas/Tarefa');
+    
+    const app = express();
+    
+    connection.authenticate()
+        .then(() => {
+            console.log('Conexão realizada com sucesso');
+        })
+        .catch((mensagemDeErro) => {
+            console.log(mensagemDeErro);
+        });
+    
+    app.set('view engine', 'ejs');
+    app.use(express.static('public'));
+    app.use(express.urlencoded());
+    
+    app.use('/', tarefaController); // Tem que ficar após a declaração do urlencoded()
+    
+    app.get('/', (req, res) => {
+        Tarefa.findAll({
+            order: [
+                ['id', 'DESC']
+            ]
+        }).then(tarefas => {
+            res.render('pages/index', {
+                tarefas: tarefas
+            });
+        });
+    });
+    
+    app.listen(3000, () =>{
+        console.log('Server iniciado na porta 3000');
+    });
+
+Agora vamos analisar as novidades:
+
+    const router = express.Router();
+
+O `express.Router` permite criar manipuladores de rotas.
+
+    router.post('/salvartarefa', (req, res) => {
+
+O `router.post` *(bem como o `app.post` no caso de que se tudo estivesse dentro de `index.js`)* serve para ações POST do HTML.
+
+    let titulo = req.body.titulo;
+    let descricao = req.body.descricao;
+    let data = req.body.data;
+
+Os valores (`name`) de umformulário serão "capturados" por `req.body`.
+
+    res.redirect('/');
+
+Bem óbvio, né? Redireciona para a rota estabelecida no parâmetro desse método.
+
+    app.use(express.urlencoded());
+
+Esta função analisa cargas *urlencoded*. Basicamente, você precisa dele para que você "capture" os valores passados pelos formulários.
+
+    app.use('/', tarefaController);
+
+Este aqui é para tratar dos caminhos. O `'/'` aqui serve como prefixo, se fosse "/x", para acessar /tarefa eu teria que digitar "*nomedosite.com/x/tarefa*"
+
+
+## Conclusão<span id="nodejs_conclusao"></span>
+
+Acho que você já tem uma boa base, a partir daqui sugiro o seguinte curso gratuito:
+
+* [30 days of Node](https://www.nodejsera.com/30-days-of-node.html)
