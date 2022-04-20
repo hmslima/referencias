@@ -636,6 +636,8 @@ Se você atualizar a pasta, só em olhar a fonte você reparará que o Bootstrap
 
      app.use(express.static('public'));
 
+Primeiro vamos entender o que é um *middleware*: *middleware* é um método, função ou operação chamada entre o processamento do *request* e o envio da *response* no método da sua aplicação.
+
 Temos duas coisas aqui, o `app.use()` e o `express.static()`. O `app.use()` monta uma função *[middleware](https://pt.wikipedia.org/wiki/Middleware)* específica. O `express.static()`, por sua vez, é uma função *middleware* do Express que serve arquivos estáticos, o parâmetro dessa função é a pasta onde estão os arquivos estáticos.
 
 Repare que, no monento quando colocamos os endereços dos arquivos .css e .js, eles foram...
@@ -1652,7 +1654,8 @@ Baixe o arquivo .css do Bootstrap [no site do projeto](https://getbootstrap.com/
     
     app.set('view engine', 'ejs');
     app.use(express.static('public'));
-    app.use(express.urlencoded());
+    app.use(expresapp.use(express.urlencoded({extended: true}));
+    app.use(express.json());s.urlencoded());
     
     app.use('/', tarefaController); // Tem que ficar após a declaração do urlencoded()
     
@@ -1674,6 +1677,17 @@ Baixe o arquivo .css do Bootstrap [no site do projeto](https://getbootstrap.com/
 
 Agora vamos analisar as novidades:
 
+    app.use(express.urlencoded({extended: true}));
+    app.use(express.json());
+
+`express.json()` and `express.urlencoded()` são para *requests* POST e PUT porque você está enviando dados que estão incluidos no *body* (como você viu no `req.body`), não para *requests* GET e DELETE. O `express.json()` é um método que reconhece *Request Objects* do tipo JSON enquanto o `express.urlencoded()` é um método que reconhece *Request Objects* do tipo *string* or *array*.
+
+O `extended` informa ao framework Express qual biblioteca utilizar para fazer o *parsing* do conteúdo, se for *true* usará a biblioteca [qs](https://www.npmjs.com/package/qs), se for *false* usará [query-string](https://www.npmjs.com/package/query-string). A diferença é que o `qs` permite o qs permite o aninhamento de objetos da mesma forma feita pelo JSON.
+
+    app.use('/', tarefaController);
+
+Este aqui é para tratar dos caminhos. O `'/'` aqui serve como prefixo, se fosse "/x", para acessar /tarefa eu teria que digitar "*nomedosite.com/x/tarefa*"
+
     const router = express.Router();
 
 O `express.Router` permite criar manipuladores de rotas.
@@ -1691,15 +1705,6 @@ Os valores (`name`) de umformulário serão "capturados" por `req.body`.
     res.redirect('/');
 
 Bem óbvio, né? Redireciona para a rota estabelecida no parâmetro desse método.
-
-    app.use(express.urlencoded());
-
-Esta função analisa cargas *urlencoded*. Basicamente, você precisa dele para que você "capture" os valores passados pelos formulários.
-
-    app.use('/', tarefaController);
-
-Este aqui é para tratar dos caminhos. O `'/'` aqui serve como prefixo, se fosse "/x", para acessar /tarefa eu teria que digitar "*nomedosite.com/x/tarefa*"
-
 
 ## Conclusão<span id="nodejs_conclusao"></span>
 
