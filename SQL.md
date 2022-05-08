@@ -148,6 +148,13 @@ E a terceira forma é por meio do `systemctl`. Para iniciar, parar e reiniciar o
 
     sudo systemctl restart mysqld
 
+*Adição: no openSUSE, foram os comandos abaixo que funcionaram:*
+
+    rcmysql start
+
+    rcmysql stop
+
+
 <div class="espacoEntreSubcapitulos"></div>
 
 ## Configuração de senha<span id="sql_configSenha"></span>

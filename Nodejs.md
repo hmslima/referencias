@@ -151,7 +151,7 @@ A propósito, `.listen` poderia estar "colado" no método `.createServer`:
     const http = require('http');
     
     const server = http.createServer((req, res) => {
-        res.end("Olás mundo");
+        res.end("Olá mundo");
     }).listen(3000);
 
 ### Um "Hello World" mais completo<span id="nodejs_primeiroservidor_maiscompleto"></span>

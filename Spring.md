@@ -6,15 +6,15 @@
 
 * [Spring](#spring)
 
-	* [Criação do projeto](#spring_criacaoprojeto)
+	* [Configuração](#spring_config)
 
-	* [Primeiros passos](#spring_criacaoprojeto)
+	* [Primeiro projeto (com configuração XML)](#spring_primeiroprojetoxml)
 
-	* [JPA e Banco de dados H2](#spring_JPAH2)
+		* [Projeto com dependências](#spring_primeiroprojetoxml_dependencias)
 
-	* [Repositórios](#spring_repository)
+	* [Inversão de controle e Injeção de Dependência](#spring_iocinj)
 
-	* [Camada de serviço](#spring_servico)
+	* [Primeiro projeto (com Java Annotations)](#spring_primeiroprojetojavaannotations)
 
 
 # Introdução<span id="intro"></span>
@@ -23,465 +23,503 @@ Leia o [README](README.md).
 
 # Spring<span id="spring"></span>
 
-*Antes de inicar este tutorial, sugiro fortemente que você já tenha familiaridade com o [JDBC](JDBC.md) e com o [JPA](JPA-Hibernate.md).* 
-
 Spring é um framework completo que fornece uma estrutura para criar aplicações Java. Esse framework é constituído de módulos agrupados em *Core Container*, *Data Access/Integration*, *Web*, *AOP (Aspect Oriented Programming)*, *Instrumentation* e *Test*.
 
 Por exemplo, dentro do *Data Access/Integration* (Integração/Acesso aos Dados), temos o JDBC, ORM, OXM, JMS e Transactions. Já esse ORM, provê integração a APIs como JPA, JDO, Hibernate e iBatis.
 
 O nosso projeto terá a seguinte estrutura, a aplicação conversa com o *Resource Layer (rest controllers)*, este por sua vez conversa com *Service Layer* e este último conversa com *Data Access Layer (data repositories)*.
 
-## Criação do projeto<span id="spring_criacaoprojeto"></span>
+## Configuração<span id="spring_config"></span>
 
-Tudo será feito no STS *(Spring Tool Suite)*.
+Usaremos o Eclipse EE. É bem simples, crie um novo `Java Project`, mas **não** crie um `module-info.java` pra ele!
 
-File ⇒ New ⇒ Spring Starter Project
+Baixe o [Tomcat](https://tomcat.apache.org/). Se você for usar o Spring 5.x, fique sabendo que essa versão só é compatível com a versão 9 do Tomcat. Mude para o modo de perspectiva do Java EE, na parte de baixo clique na aba `Servers` e clique no link para criar um novo servidor. Depois de configurar você pode voltar para a perspectiva normal do Java.
 
-No `name` eu coloquei *curso*, mas a escolha é sua.
+Acesse o site do [JFrog](https://repo.spring.io/ui/) e siga este caminho: `Artifactory` => `Artifacts` => `libs-release` => `org` => `springframework` => `spring` => Escolha a versão mais recente => `spring-x.x.x-dist.zip` *(sendo `x.x.x` a versão)*. Baixe e descompacte o arquivo .zip, crie uma pasta `lib` no seu projeto, cole os arquivos jar lá e adicione-os ao seu projeto: clique com o botão direito do mouse sobre o nome do projeto => `Build Path` => `Configure Build Path` => Vá na aba `Libraries` => Selecione `Class Path` => `Add JARs...` => Procure os arquivos JARs na pasta `lib` do seu projeto => Aplique as mudanças
 
-É esperado que a configuração padrão esteja do jeito que queremos, `Type` como *Maven Project*, `Java Version` como a última versão LTS do Java, `Packaging` como *Jar* e `Language` como *Java*. É lógico que, caso você for fazer algo diferente, como programar wem Kotlin, achar melhor usar o Gradle ou outra coisa, você é livre para modificar.
+## Primeiro projeto (com configuração XML)<span id="spring_primeiroprojetoxml"></span>
 
-Em `Group`, você coloca o nome de acordo com o da empresa. No exemplo, colocarei *com.hmslima*. Em `Package` deixei *com.hmslima.curso*.
+Dentro da pasta `src`, crie o arquivo `applicationContext.xml`, este será o conteúdo dele:
 
-Clique em Next.
+**applicationContext.xml**
 
-Você estará numa janela com o título "New Spring Starter Project Dependencies". Selecione a opção "Spring Web Starter", se você não encontrar exatamente essa opção, escolha "Spring Web". Clique em `Finish` e espere o STS baixar as dependências.
-
-Para verificar se tudo está OK, abra o arquivo .java dentro de `src/main/java` e execute-o como *Spring Boot App*, assim será iniciado o servidro do [Tomcat](https://pt.wikipedia.org/wiki/Apache_Tomcat). Você poderá ver se tudo está rodando na aba `Console`. Lá também você poderá ver em que porta o servidor está rodando, a não ser que outro servidor esteja rodando na sua máquina, a porta usada será a 8080:
-
-    Tomcat initialized with port(s): 8080 (http)
-
-Assumindo que, no seu computador, a porta escolhida pelo Tomcat foi a 8080, é para que o endereço [http://localhost:8080/](http://localhost:8080/) esteja funcionando. É normal que apareça a mensagem de erro abaixo na página que você for abrir.
-
-> **Whitelabel Error Page**
-> 
-> This application has no explicit mapping for /error, so you are seeing this as a fallback.
-> 
-> Tue Apr 12 21:19:07 BRT 2022
-> 
-> There was an unexpected error (type=Not Found, status=404).
-
-*É lógico que a data que aparecerá no seu computador será diferente...*
-
-Para finalizar este capítulo, repare que dentro da pasta do seu projeto, onde você iniciaria o Git, o próprio Spring Boot criou o arquivo `.gitignore`
-
-## Primeiros passos<span id="spring_criacaoprojeto"></span>
-
-Nossos arquivos serão criados em `src/main/java`.
-
-Crie a classe *User* no pacote *entities*. No meu caso aqui, como defini o prefixo do meu pacote como `com.hmslima.curso`, o nome completo do pacote *entities* será `com.hmslima.curso.entities`.
-
-    package com.hmslima.curso.entities;
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
     
-    import java.io.Serializable;
+        
+        <!-- Defina seus beans aqui -->
+        
+        <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">             
+        </bean>
     
-    public class User implements Serializable {
-        private static final long serialVersionUID = 1L;
-        
-        private Long id;
-        private String name;
-        private String email;
-        private String password;
-        
-        public User() {
+    </beans>
+
+Crie um pacote chamado `dominio.spring1`. Dentro dele crie os seguintes arquivos:
+
+**Tecnico.java**
+
+    package dominio.spring1;
+    
+    public interface Tecnico {
+        public String getTarefa();
+    }
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
+    
+    public class TecnicoDeFutebol implements Tecnico {
+    
+        @Override
+        public String getTarefa() {
             
+            return "Correr 5km";
         }
     
-        public User(Long id, String name, String email, String password) {
-            this.id = id;
-            this.name = name;
-            this.email = email;
-            this.password = password;
-        }
-    
-        public Long getId() {
-            return id;
-        }
-    
-        public void setId(Long id) {
-            this.id = id;
-        }
-    
-        public String getName() {
-            return name;
-        }
-    
-        public void setName(String name) {
-            this.name = name;
-        }
-    
-        public String getEmail() {
-            return email;
-        }
-    
-        public void setEmail(String email) {
-            this.email = email;
-        }
-    
-        public String getPassword() {
-            return password;
-        }
-    
-        public void setPassword(String password) {
-            this.password = password;
-        }
-    
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((id == null) ? 0 : id.hashCode());
-            return result;
-        }
-    
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            User other = (User) obj;
-            if (id == null) {
-                if (other.id != null)
-                    return false;
-            } else if (!id.equals(other.id))
-                return false;
-            return true;
-        }
     }
 
-*Na hora de pôr o STS para gerar o hashCode() e equals(), você pode deixar só a opção de Id selecionada.*
+**App.java**
 
-Agora criaremos um recurso *(da camada Resource Layer)* baseado na classe *User* que se chamará *UserResource* no subpacote *resources*. *UserResource* será nosso primeiro controlador REST.
-
-**UserResource.java**
-
-    package com.hmslima.curso.resources;
+    package dominio.spring1;
     
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.web.bind.annotation.GetMapping;
-    import org.springframework.web.bind.annotation.RequestMapping;
-    import org.springframework.web.bind.annotation.RestController;
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
     
-    import com.hmslima.curso.entities.User;
+    public class App {
     
-    // O @RestController é uma annotation que indica que a classe é um recurso web que é implementado por um controlador REST
-    // O @RequestMapping serve para dar um nome ao recurso. O valor de value é o caminho do recurso
-    @RestController
-    @RequestMapping(value="/users")
-    public class UserResource {
-    
-        //Endpoint para acessar os usuários. Para indicar que o método findAll responde à requisição do tipo GET do HTTP, usaremos o annotation @GetMapping
-        @GetMapping
-        public ResponseEntity<User> findAll() {
-            // Só para teste, vou instanciar um usuário
-            User usuario = new User(1L, "João Freitas", "joao@terra.com.br", "12345");
-            return ResponseEntity.ok().body(usuario);
-        }
-    }
-
-Para testar se tudo está OK, rode o arquivo principal como *Spring Boot App* e então acesse o endereço [http://localhost:8080/users](http://localhost:8080/users) pelo seu navegador, é esperado que apareça as informações do usuário que você instanciou em forma de JSON.
-
-## JPA e Banco de dados H2<span id="spring_JPAH2"></span>
-
-O H2 é um sistema de gerenciamento de banco de dados relacional escriot em Java. Ele roda na memória e já vem integrado no Spring.
-
-O JPA você já conhece [do meu outro tutorial](JPA-Hibernate.md). O que faremos não será novidade para você, vamos pôr as dependências no arquivo `pom.xml`. Vá lá no site MvnRepository e baixe as dependências para **Spring Boot Starter Data JPA** e **H2**.
-
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    
-    <dependency>
-        <groupId>com.h2database</groupId>
-        <artifactId>h2</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-
-Agora vá na pasta `src/main/resources`, no arquivo `application.properties` *(se ele, por acaso, não existir, crie-o)*. É normal que ele esteja vazio. Adicionaremos as seguintes linhas:
-
-    spring.profiles.active=test
-    
-    spring.jpa.open-in-view=true
-
-É no arquivo `application.properties` onde ficam as configurações de desenvolvimento, o próprio nome do arquivo e sua extensão mostram a função desde arquivo que é automaticamente detectado pelo Spring.
-
-Em `spring.profiles.active`, definimos o apelido do *profile* que usaremos, isso indica qual *profile* está ativo. Observe que tem que ser um *profile* que exista, por padrão o Spring já monta um perfil chamado *test* para você.
-
-Para entender o `spring.jpa.open-in-view`, precisamos entender o que é *Open Session in View (OSIV)*: Spring abre uma nova *session* do Hibernate no início de cada *request* que não são necessariamente conectadas ao banco de dados, toda vez que uma aplicação necessita de uma *session*, será reutilizada uma já existente e, no final da *request*, o interceptador fecha a *session*. O problema, é que as vezes o OSIV pode causar problemas de performance, então, se for necessário desativar o OSIV, usamos a propriedade de configuração `spring.jpa.open-in-view=false`.
-
-Ainda na pasta `src/main/resources`, crie o arquivo `application-test.properties`. É esse arquivo que conterá as configurações do banco de dados H2.
-
-    spring.datasource.url=jdbc:h2:mem:testdb
-    spring.datasource.username=sa
-    spring.datasource.password=
-    
-    spring.h2.console.enabled=true
-    spring.h2.console.path=/h2console
-    
-    spring.jpa.show-sql=true
-    spring.jpa.properties.hibernate.format_sql=true
-
-A propriedade `spring.datasource.url` requer uma explicação: o `testdb` é o nome do banco de dados; o `mem` indica que será um banco de dados em memória, ou seja, não haverá nenhum arquivo no disco.
-
-Agora precisamos adicionar algumas *annotations* do JPA na nossa clase *User* para que ele converta os objetos para o modelo relacional.
-
-**User.java**
-
-    package com.hmslima.curso.entities;
-    
-    import java.io.Serializable;
-    
-    import javax.persistence.Entity;
-    import javax.persistence.GeneratedValue;
-    import javax.persistence.GenerationType;
-    import javax.persistence.Id;
-    
-    @Entity
-    public class User implements Serializable {
-        private static final long serialVersionUID = 1L;
-        
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
-        private String name;
-        private String email;
-        private String password;
-        
-        public User() {
+        public static void main(String[] args) {
             
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            
+            context.close();
+    
         }
     
-        public User(Long id, String name, String email, String password) {
-            this.id = id;
-            this.name = name;
-            this.email = email;
-            this.password = password;
+    }
+
+
+Vamos entender esse código: A ideia é simples, tem uma interface `Tecnico` que é usada na classe `TecnicoDeFutebol` e esta classe tem um método que exibirá uma certa mensagem. Basicamente toda classe que nos gerará um objeto.
+
+No arquivo .xml temos a linha abaixo:
+
+    <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol"></bean>
+
+Definimos um *bean* para a classe TecnicoDeFutebol cujo id será "meuTecnico" *(eu poderia escolher qualquer palavra)*. Em `class` colocamos o caminho para a classe.
+
+No arquivo `App.java`, temos a linha a seguir:
+
+    ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+
+Ele serve para apontar o arquivo .xml de configuração, eu poderia ter escolhido qualquer nome para o arquivo .xml.
+
+    Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+
+É assim que criamos uma bean.
+
+Depois você precisará fechar o bean.
+
+    context.close();
+
+Por padrão, as beans tem escopo *singleton*, de forma que se eu fizer isso:
+
+    Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+    Tecnico oOutroTecnico = context.getBean("meuTecnico", Tecnico.class);
+
+Continuaremos com o mesmo objeto, pois `oTecnico` e `oOutroTecnico` apontarão para o mesmo espaço de memória. Posso provar isso, modifique o arquivo `App.java` pra isso e veja por si só:
+
+    package dominio.spring1;
+    
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+            Tecnico oOutroTecnico = context.getBean("meuTecnico", Tecnico.class);
+            
+            System.out.println(oTecnico == oOutroTecnico);
+            
+            context.close();
+    
         }
     
-        public Long getId() {
-            return id;
+    }
+
+
+Para criar *beans* individualizados, precisamos definir o escopo como propotype. É simples, vá em `applicationContext.xml` e adicione o atributo `scope="prototype"`:
+
+    <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol" scope="prototype"></bean>
+
+Agora veja se `System.out.println(oTecnico == oOutroTecnico)` continuará retornando *true*.
+
+### Projeto com dependências<span id="spring_primeiroprojetoxml_dependencias"></span>
+
+**applicationContext.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+    
+        <!-- Defina suas dependências aqui -->  
+        <bean id="minhaDica" class="dominio.spring1.DicaDoTecnico">
+        </bean>
+        
+        <!-- Defina seus beans aqui -->    
+        <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">
+        	<!-- define a injeção de construtor -->
+        	<constructor-arg ref="minhaDica" />
+        </bean>
+    
+    </beans>
+
+**Dica.java**
+
+    package dominio.spring1;
+    
+    public interface Dica {
+        public String getDica();
+    }
+
+**DicaDoTecnico.java**
+
+    package dominio.spring1;
+    
+    public class DicaDoTecnico implements Dica {
+    
+        @Override
+        public String getDica() {
+            return "Todo dia, pela manhã, beba suco de limão com ovo";
         }
     
-        public void setId(Long id) {
-            this.id = id;
-        }
+    }
+
+**Tecnico.java**
+
+    package dominio.spring1;
     
-        public String getName() {
-            return name;
-        }
+    public interface Tecnico {
+        public String getTarefa();
+        public String getDica();
+    }
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
     
-        public void setName(String name) {
-            this.name = name;
-        }
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
     
-        public String getEmail() {
-            return email;
-        }
-    
-        public void setEmail(String email) {
-            this.email = email;
-        }
-    
-        public String getPassword() {
-            return password;
-        }
-    
-        public void setPassword(String password) {
-            this.password = password;
+        public TecnicoDeFutebol(Dica dica) {
+            this.dica = dica;
         }
     
         @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((id == null) ? 0 : id.hashCode());
-            return result;
+        public String getTarefa() {
+            
+            return "Correr 5km";
         }
     
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            User other = (User) obj;
-            if (id == null) {
-                if (other.id != null)
-                    return false;
-            } else if (!id.equals(other.id))
-                return false;
-            return true;
+        public String getDica() {
+            return dica.getDica();
         }
+    
     }
 
-Rode a aplicação como *Spring Boot App*.
+**App.java**
 
-Abra o seu navegador e vá até o endereço [http://localhost:8080/h2console](http://localhost:8080/h2console) *(se você não entende este "h2-console", lembre-se que o definimos no arquivo `application-test.properties`)*.
-
-Você preencherá os valores de acordo com o que está no seu arquivo `application-test.properties`.
-
-## Repositórios<span id="spring_repository"></span>
-
-Vamos criar a interface `UserRepository` no subpacote `repositories`. Ele serve para salvar os dados no banco de dados.
-
-**UserRepository.java**
-
-    package com.hmslima.curso.repositories;
+    package dominio.spring1;
     
-    import org.springframework.data.jpa.repository.JpaRepository;
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
     
-    import com.hmslima.curso.entities.User;
+    public class App {
     
-    // O "Long" no generic se refere ao tipo do Id
-    public interface UserRepository extends JpaRepository<User, Long> {
-        // Só o fato de eu ter usado o JpaRepository, essa interface já terá uma implementação automaticamente, até mesmo a annotation @Repository está implicitamente posta nessa classe
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            context.close();
+    
+        }
+    
     }
 
-Agora criaremos uma classe de configuração específica para o *profile* `test` no subpacote `config`. Essa classe servirá para popular o banco de dados com objetos.
+Vejamos as novidades.
 
-**TestConfig.java**
+Em `applicationContext.xml` criamos a bean para a classe `DicaDoTecnico`
 
-    package com.hmslima.curso.config;
+    <bean id="minhaDica" class="dominio.spring1.DicaDoTecnico"></bean>
+
+E referenciamos essa nova *bean* dentro da bean da classe `TecnicoDeFutebol`:
+
+    <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">
+        <constructor-arg ref="minhaDica" />
+    </bean>
+
+Repare que o atributo `ref` contém o `id` da *bean* a qual ela referencia. Compare o trecho acima com o trecho debaixo, que se refere ao construtor da classe `TecnicoDeFutebol`:
+
+    public TecnicoDeFutebol(Dica dica) {
+        this.dica = dica;
+    }
+
+## Inversão de controle e Injeção de Dependência<span id="spring_iocinj"></span>
+
+Na minha opinião, fica masi fácil explicar esses conceitos após você ter sido exposto(a) ao Spring. Vamos ver como seria nosso projeto se ele fosse escrito em Java puro:
+
+**Dica.java**
+
+    package dominio;
     
-    import java.util.Arrays;
+    public interface Dica {
+        public String getDica();
+    }
+
+**DicaDoTecnico.java**
+
+    package dominio;
+    
+    public class DicaDoTecnico implements Dica {
+    
+        @Override
+        public String getDica() {
+            return "Todo dia, pela manhã, beba suco de limão com ovo";
+        }
+    
+    }
+
+**Tecnico.java**
+
+    package dominio;
+    
+    public interface Tecnico {
+        public String getTarefa();
+        public String getDica();
+    }
+
+**TecnicoDeFutebol.java**
+
+    package dominio;
+    
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
+        public TecnicoDeFutebol(Dica dica) {
+            this.dica = dica;
+        }
+    
+        @Override
+        public String getTarefa() {
+            
+            return "Correr 5km";
+        }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
+    }
+
+
+**App.java**
+
+    package dominio;
+    
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            DicaDoTecnico dica = new DicaDoTecnico(); 
+            
+            Tecnico oTecnico = new TecnicoDeFutebol(dica);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+    
+        }
+    
+    }
+
+Num programa Java comum, nós mesmos instanciamos um objeto:
+
+    Tecnico oTecnico = new TecnicoDeFutebol(...);
+
+Na **Inversão de Controle**, a instanciação é feita externamente e não dentro da classe em questão
+
+    Tecnico oTecnico = context.getBean(...);
+
+A **Injeção de Dependência** é similar, injeta a dependência de uma classe para outra classe.
+
+## Primeiro projeto (com Java Annotations)<span id="spring_primeiroprojetojavaannotations"></span>
+
+Recriaremos o projeto anterior com menor uso do arquivo .xml. Mostrarei aqui apenas os arquivos que precisaremos editar, o resto continuará como no exemplo anterior:
+
+**applicationContext.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+    
+        <!-- Habilita o escaneamento de componentes -->  
+        <context:component-scan base-package="dominio.spring1" />
+    
+    </beans>
+
+**DicaDoTecnico.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component
+    public class DicaDoTecnico implements Dica {
+    
+        @Override
+        public String getDica() {
+            return "Todo dia, pela manhã, beba suco de limão com ovo";
+        }
+    
+    }
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
     
     import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.boot.CommandLineRunner;
-    import org.springframework.context.annotation.Configuration;
-    import org.springframework.context.annotation.Profile;
+    import org.springframework.stereotype.Component;
     
-    import com.hmslima.curso.entities.User;
-    import com.hmslima.curso.repositories.UserRepository;
+    @Component
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
     
-    @Configuration
-    @Profile("test")
-    public class TestConfig implements CommandLineRunner {
         @Autowired
-        private UserRepository userRepository; // Com a annotation @Autowired, o Sprign resolverá as dependências e associará a instância do UserRepository com o TestConfig  
+        public TecnicoDeFutebol(Dica dica) {
+            this.dica = dica;
+        }
     
         @Override
-        public void run(String... args) throws Exception {
-            // Tudo que for colocado neste método será rodado quando a aplicação for iniciada
-            User u1 = new User(null, "Marcelino Ficha", "marcelino@gmail.com", "12345678");
-            User u2 = new User(null, "Tânia Conceicão", "tc@gmail.com", "12345678");
+        public String getTarefa() {
             
-            // Salvaremos agora u1 e u2 no banco de dados
-            userRepository.saveAll(Arrays.asList(u1, u2));
+            return "Correr 5km";
         }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
     }
 
-*Com `@Profile("test")`, o Spring saberá que ele só rodará essa configuração no *profile* de `test`.*
+**App.java**
 
-Rode a aplicação como Spring Boot App, acesse o endereço [http://localhost:8080/h2console](http://localhost:8080/h2console) (ou o endereço que você definiu) e veja se os usuários "Marcelino Ficha" e "Tânia Conceicão" foram adicionados à lista.
-
-## Camada de serviço<span id="spring_servico"></span>
-
-O controlador precisa da camada de serviço em vez de acessar diretamente o repositório porque essa é a forma preferencial, porque assim é possível implementar regras de negócio ou qualquer outra manipulação.
-
-Agora criaremos a classe `UserService` no subpacote `services`.
-
-    package com.hmslima.curso.services;
+    package dominio.spring1;
     
-    import java.util.List;
-    import java.util.Optional;
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("tecnicoDeFutebol", Tecnico.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            context.close();
+    
+        }
+    
+    }
+
+É só colocar `@Component` sobre as classes que virarão *beans*. O `@Autowired` serve para injetar *beans* dependentes em outros *beans*.
+
+Se você prestar atenção, se perguntará porque na linha...
+
+    Tecnico oTecnico = context.getBean("tecnicoDeFutebol", Tecnico.class);
+
+...do arquivo `App.java`, pudemos definir o nome `"tecnicoDeFutebol"` sem precisar ter estabelecido um `id` pra ele. É que o próprio Spring gera esse nome pra nós, ele pega o nome da classe e deixa minúscula a primeira letra, ou seja, o próprio Spring pegou o nome da classe `TecnicoDeFutebol` e criou a id `TecnicoDeFutebol`. Entretanto, se a primeira e segunda letra forem maiúsculas, como por exemplo em `RESTFutebol`,o nome continuará o mesmo. Mas podemos definir um nome qui quisermos na anotação:
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
     
     import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.stereotype.Service;
+    import org.springframework.stereotype.Component;
     
-    import com.hmslima.curso.entities.User;
-    import com.hmslima.curso.repositories.UserRepository;
+    @Component("meuTecnico")
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
     
-    // @Component // Além do @Component, o Spring tem outras annotations com uma semântica mais específica, como nossa classe se trata de um service, usamos o @Service aqui
-    @Service
-    public class UserService {
         @Autowired
-        private UserRepository repository;
-        
-        public List<User> findAll() {
-            return repository.findAll();
+        public TecnicoDeFutebol(Dica dica) {
+            this.dica = dica;
         }
-        
-        public User findById(Long Id) {
-            Optional<User> obj = repository.findById(Id);
-            return obj.get();
+    
+        @Override
+        public String getTarefa() {
+            
+            return "Correr 5km";
         }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
     }
 
-E modifique o arquivo `UserResource`:
+**App.java**
 
-    package com.hmslima.curso.resources;
+    package dominio.spring1;
     
-    import java.util.List;
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
     
-    import org.springframework.beans.factory.annotation.Autowired;
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.web.bind.annotation.GetMapping;
-    import org.springframework.web.bind.annotation.PathVariable;
-    import org.springframework.web.bind.annotation.RequestMapping;
-    import org.springframework.web.bind.annotation.RestController;
+    public class App {
     
-    import com.hmslima.curso.entities.User;
-    import com.hmslima.curso.services.UserService;
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            context.close();
     
-    @RestController
-    @RequestMapping(value="/users")
-    public class UserResource {
-        
-        @Autowired
-        private UserService service; // Para o UserService funcionar, ela tem que estar registrada como componente do Spring, por isso que adicionamos a annotation @Component na classe UserService
-    
-        @GetMapping
-        public ResponseEntity<List<User>> findAll() {
-            List<User> list = service.findAll(); // Aqui chamo o serviço
-            return ResponseEntity.ok().body(list);
         }
-        
-        @GetMapping(value="/{id}")
-        public ResponseEntity<User> findById(@PathVariable Long id) { // O @PathVariable serve para linkar o parâmetro id com o valor definido no @GetMapping
-            User obj = service.findById(id);
-            return ResponseEntity.ok().body(obj);
-        }
+    
     }
-
-Rode o aplicativo como Spring Boot App para ver se está tudo OK e então abra o Postman, se você ainda não o baixou, [este é o site](https://www.postman.com/).
-
-Ao abrir o Postman, vá em `Workspace` ⇒ `New Workspace` ⇒ `+` ⇒ `New Collection` ⇒ `Add a request`
-
-Vá em `Get started with Postman` ⇒ `Start with something new` ⇒ `Create New →` ⇒ `New Collection` ⇒ `Add request`. Em *Enter request URL*, ponha [http://localhost:8080/users](http://localhost:8080/users). Lembre-se, o Tomcat tem que estar funcionando.
-
-Agora teste com o endereço [http://localhost:8080/users/1](http://localhost:8080/users/1)
-
-## Classe de pedido<span id="spring_pedido"></span>
-
-
-
-
-Um pedido (order) tem um cliente e um cliente tem vários pedidos. Na classe User, adicione o atributo Order e seu respectivos getter ~e setters~ *(nada de colocar setter para coleções!)*.
-
-    @OneToMany(mappedBy = "client") // "client" porque na classe Order, User está mapeado pelo atributo client
-    private List<Order> orders = new ArrayList<>();
-
-A annotation `@ManyToOne` permite que o JPA faça as chaves estrangeiras entre Order e User.
-
-Crie um service e repository para a classe *Order* da mesma forma que você criou para  aclasse *User*. E não esqueça de atualizar o arquivo `TestConfig.java`
-
-Você reparará que usuário chama pedido, pedido chama usuário e cai num loop infinito. Por isso que o @JsonIgnore é posto em um dos dois lados
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "client")
-    private List<Order> orders = new ArrayList<>();
-
-Outro conceito importante é o "lazy loading". Quando há uma chamada de um objeto Order, o JPA automaticamente carrega o objeto User associado a ele por padrão, entretanto isso não acontece do lado do "um para muitos", se você carrega um objeto com associação para muitos, o JPA não carregar os objetos do lado do "muitos" por padrão.
-
-Se coloco o `spring.jpa.open-in-view` *(do arquivo `application-test.properties`)* como *false*, desabilito a possibilidade do jackson, lá no fim do ciclo de vida, convocar o JPA para trazer os objetos de Order associados aos objetos de User.
-
-Na classe Order.java, para garantir que o Instant seja mostrado no formato ISO 8601 no JSON, uso o annotation ao lado
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "GMT")
-	private Instant moment;

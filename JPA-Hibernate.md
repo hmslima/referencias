@@ -14,6 +14,8 @@
 
 		* [persistence.xml](#jpa_config_persistence)
 
+		* [EXTRA: Configuração sem o Maven](#jpa_config_manual)
+
 	* [Mapeamentos](#jpa_mapeamentos)
 
 	* [Adição](#jpa_adicao)
@@ -195,6 +197,40 @@ Observe os *values* de cada `<property>`, se você viu meu tutorial de [JDBC](JD
 A propriedade `<property name="hibernate.hbm2ddl.auto" value="update"/>` serve para gerar automaticamente o banco de dados. Com o `value` como *update*, isso signifa que o banco de dados será automaticamente atualizado sempre que a aplicação for rodada; mas se eu quiser recriar o banco de dados toda vez que eu rodar a aplicação, é só trocar *update* por *create*.
 
 Você pode ter problemas com a linha `<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect" />`. Qualquer coisa, acesse [esta página](https://docs.jboss.org/hibernate/orm/6.0/javadocs/org/hibernate/dialect/package-summary.html) *(ou outra página relativa a uma versão mais nova/velha que esta...)*
+
+### EXTRA: Configuração sem o Maven<span id="jpa_config_manual"></span>
+
+*Recomendo que você use o Maven, mas aqui está o meio de como realizar a configuração manual.*
+
+Para configurar o Hibernate de forma mais manual, você precisa baixar os arquivos .jar, vá [nesta página](https://hibernate.org/orm/releases/) e procure por *"Download Zip archive"*, onde você será direcionao à [página do Source Forge](https://sourceforge.net/projects/hibernate/files/). Vá em *"hibernate-orm"* e baixe o arquivo .zip que você achar melhor, observe as versões.
+
+Extraia os arquivos e cole-os na pasta `lib` que você criará dentro do seu projeto.
+
+Clique com o botão direito sobre o nome do seu projeto, selecione `Build Path`, então `Configure Build Path`. Na aba *Libraries*, selecione *Module Path* e então aperte no botão `add JARs...`. Selecione todos os arquivos da pasta lib do seu projeto.
+
+Terei que me adiantar aqui. Mais a frente, você usará as anotações `@Entity` e `@Table` requerirão um import. O problema é que, no momento que você pedir ao Eclipse por sugestões, a IDE não lhe mostrará diretamente o caminho `javax.persistence`, você primeiro terá que selecionar `hibernate.jpa` para que então as opções `javax.persistence` apareçam para você.
+
+É para que seu arquivo `module-info.java` esteja assim:
+
+    module <nome_do_seu_projeto> {
+    	requires hibernate.jpa;
+    }
+
+Você também precisará criar um arquivo chamado `hibernate,cfg.xml`, pode ser dentro da pasta `src` mesmo. Para auxiliar na criação desse arquivo, recomendo que você baixe a extensão JBoss para o Eclipse, ela habilitará a IDE criar novos tipos de arquivos, um deles o `hibernate,cfg.xml`. Veja como ficou o meu:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE hibernate-configuration PUBLIC
+    		"-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+    		"http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+    <hibernate-configuration>
+        <session-factory>
+            <property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
+            <property name="hibernate.connection.password">root</property>
+            <property name="hibernate.connection.url">jdbc:mysql://localhost:3306/teste</property>
+            <property name="hibernate.connection.username">root</property>
+            <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+        </session-factory>
+    </hibernate-configuration>
 
 ## Mapeamentos<span id="jpa_mapeamentos"></span>
 
