@@ -8,7 +8,7 @@ Sei que fazer tutoriais para si próprio parece ser estranho, mas gosto de estud
 
 Esses materiais que escrevi não só servem para eu aprender algo, mas também para eu reaprender as tecnologias que eu tinha deixado de lado por um tempo, são ótimos para "refrescar a memória".
 
-Já aviso que você **não** encontrará aqui materiais completos. Sim, eles são um **grande ponto de partida** ou bons refrescadores de memória, mas eles não te transformarão num ninja nas tecnologias que eles abordam.
+Já aviso que você **não** encontrará aqui materiais completos. Sim, eles são um **grande ponto de partida** ou bons refrescadores de memória, mas eles não te transformarão num ninja nas tecnologias que eles abordam. Na verdade a ideia é só tocar a superfície, ser um **pontapé inicial**.
 
 O diferencial desses tutoriais é que aplico a tecnologia com o **mínimo de dependências** e com a **maior simplicidade possível**. Por exemplo, em vez de usar um facilitador como MySQL Workbench para lidar com meus bancos de dados em MySQL, prefiro usar o terminal. Se realizo a conexão do JDBC com o banco de dados, prefiro escrever o menor número possível de linhas de código para que, quem estiver lendo, saiba o mínimo que ele ou ela necessita fazer para realizar o trabalho, mas depois desenvolvo o código para que este se adéque às boas práticas e seja mais robusto.
 

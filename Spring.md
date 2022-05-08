@@ -14,6 +14,12 @@
 
 			* [Projeto com dependências](#spring_primeiropro_xml_dependencias)
 
+			* [Lidando com setters](#spring_primeiropro_xml_setters)
+
+			* [Injeção de valores literais](#spring_primeiropro_xml_literalvalues)
+
+			* [Injeção de valores de um arquivo](#spring_primeiropro_xml_properties)
+
 		* [Inversão de controle e Injeção de Dependência](#spring_primeiropro_iocinj)
 
 		* [Com Java Annotations](#spring_primeiropro_javaannotations)
@@ -23,6 +29,8 @@
 		* [Sem configuração XML](#spring_primeiropro_semxml)
 
 			* [@Bean](#spring_primeiropro_semxml_bean)
+
+			* [Injeção de valores de um arquivo](#spring_primeiropro_semxml_properties)
 
 	* [@Bean vs @Component](#spring_beanxcomponent)
 
@@ -305,9 +313,269 @@ Repare que o atributo `ref` contém o `id` da *bean* a qual ela referencia. Comp
         this.dica = dica;
     }
 
+#### Lidando com setters<span id="spring_primeiropro_xml_setters"></span>
+
+**applicationContext.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+    
+        <!-- Defina suas dependências aqui -->  
+        <bean id="minhaDica" class="dominio.spring1.DicaDoTecnico">
+        </bean>
+        
+        <!-- Defina seus beans aqui -->    
+        <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">
+            <!-- define a injeção do setter -->
+            <property name="dica" ref="minhaDica" />
+        </bean>
+    
+    </beans>
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
+    
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
+    
+        public TecnicoDeFutebol() {
+            
+        }
+    
+        public void setDica(Dica dica) {
+            this.dica = dica;
+        }
+    
+        @Override
+        public String getTarefa() {
+            
+            return "Correr 5km";
+        }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            context.close();
+    
+        }
+    
+    }
+
+Os dois atributos da *tag* `<property name="dica" ref="minhaDica" />` merecem nossa atenção. O Spring transformará o valor atribuído em `name` em *set + Valor*, que no caso transformará *"dica"* em *"<b>setD</b>ica"*; um exemplo pra fixar, se o valor de `name` fosse *"storageService"*, Spring criaria *"<b>setS</b>torageService"*; tenha certeza que o nome a ser criado pelo Spring é o mesmo nome do método da classe referenciada. Já o valor de `ref` deve ser o `id` da *bean* que será injetada.
+
+#### Injeção de valores literais<span id="spring_primeiropro_xml_literalvalues"></span>
+
+**applicationContext.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+    
+        <!-- Defina suas dependências aqui -->  
+        <bean id="minhaDica" class="dominio.spring1.DicaDoTecnico">
+        </bean>
+        
+        <!-- Defina seus beans aqui -->    
+        <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">
+            <!-- define a injeção do setter -->
+            <property name="dica" ref="minhaDica" />
+            
+            <!-- injeta literal values -->
+            <property name="email" value="nome@email.com" />
+            <property name="cidade" value="Rio de Janeiro" />
+        </bean>
+    
+    </beans>
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
+    
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
+        
+        private String email;
+        private String cidade;
+    
+        public TecnicoDeFutebol() {
+            
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public String getCidade() {
+            return cidade;
+        }
+    
+        public void setCidade(String cidade) {
+            this.cidade = cidade;
+        }
+    
+        public void setDica(Dica dica) {
+            this.dica = dica;
+        }
+    
+        @Override
+        public String getTarefa() {
+            
+            return "Correr 5km";
+        }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.context.support.ClassPathXmlApplicationContext;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
+            
+            TecnicoDeFutebol oTecnico = context.getBean("meuTecnico", TecnicoDeFutebol.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            System.out.println(oTecnico.getEmail());
+            System.out.println(oTecnico.getCidade());
+            
+            context.close();
+    
+        }
+    
+    }
+
+Creio que você consiga interpretar o que está acontecendo no arquivo .xml, repare que defino os valores lá mesmo no arquivo .xml. Na classe `TecnicoDeFutebol` adicionei as duas variáveis `email` e `cidade`.
+
+Caso você estranhe porque mudei de...
+
+     Tecnico oTecnico = context.getBean("meuTecnico", Tecnico.class);
+
+...para
+
+    TecnicoDeFutebol oTecnico = context.getBean("meuTecnico", TecnicoDeFutebol.class);
+
+, é porque a interface `Tecnico` não tem os métodos `getEmail()`/`setEmail()` e `getCidade()`/`setCidade()` que se encontra somente na classe `TecnicoDeFutebol`. Isso é conhecimento de Java, não de Spring, não se permita ter tais dúvidas.
+
+#### Injeção de valores de um arquivo<span id="spring_primeiropro_xml_properties"></span>
+
+Inserir valores diretamente no arquivo .xml pode não ser a melhor abordagem, portanto pode ser mais interessante utilizar um arquivo de propriedades.
+
+Na pasta `src`, crie o arquivo chamado `dados.properties`.
+
+**dados.properties**
+
+    foo.email=nome@email.com
+    foo.cidade=Rio de Janeiro
+
+**applicationContext.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+    
+        <!-- Carrega o arquivo .properties -->
+        <context:property-placeholder location="classpath:dados.properties" />
+    
+        <!-- Defina suas dependências aqui -->  
+        <bean id="minhaDica" class="dominio.spring1.DicaDoTecnico">
+        </bean>
+        
+        <!-- Defina seus beans aqui -->    
+        <bean id="meuTecnico" class="dominio.spring1.TecnicoDeFutebol">
+        	<!-- define a injeção do setter -->
+        	<property name="dica" ref="minhaDica" />
+        	
+        	<!-- injeta literal values -->
+        	<property name="email" value="${foo.email}" />
+        	<property name="cidade" value="${foo.cidade}" />
+        </bean>
+    
+    </beans>
+
+Além do arquivo .properties, as novidades no arquivo `applicationContext.xml` são:
+
+    <context:property-placeholder location="classpath:dados.properties" />
+
+Que carrega o arquivo com os valores.
+
+    	<property name="email" value="${foo.email}" />
+    <property name="cidade" value="${foo.cidade}" />
+
+A substituição dos valores que estavam *hardcoded* dentro do arquivo .xml por variáveis *(`${foo.email}` e `${foo.cidade}`)*. Não é obrigado que você use esse `foo.` e nem mesmo que o arquivo tenha a extensão .properties, se eu quisesse eu poderia escrever assim:
+
+**dados**
+
+    email=nome@email.com
+    qualquercoisa.cidade=Rio de Janeiro
+
+**applicationContext.xml**
+
+    [...]
+    <context:property-placeholder location="classpath:dados" />
+    [...]
+    <property name="email" value="${email}" />
+    	<property name="cidade" value="${qualquercoisa.cidade}" />
+    [...]
+
 ### Inversão de controle e Injeção de Dependência<span id="spring_primeiropro_iocinj"></span>
 
-Na minha opinião, fica masi fácil explicar esses conceitos após você ter sido exposto(a) ao Spring. Vamos ver como seria nosso projeto se ele fosse escrito em Java puro:
+Na minha opinião, fica mais fácil explicar esses conceitos após você ter sido exposto(a) ao Spring. Vamos ver como seria nosso projeto se ele fosse escrito em Java puro:
 
 **Dica.java**
 
@@ -817,6 +1085,103 @@ Para que você não se perca, re-exibirei todos os arquivos do projeto:
             
             System.out.println(oTecnico.getTarefa());
             System.out.println(oTecnico.getDica());
+            
+            context.close();
+    
+        }
+        
+    }
+
+#### Injeção de valores de um arquivo<span id="spring_primeiropro_semxml_properties"></span>
+
+**dados.properties**
+
+    foo.email=nome@email.com
+    foo.cidade=Rio de Janeiro
+
+**ArquivoDeConfiguracao.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.PropertySource;
+    
+    @Configuration
+    @PropertySource("classpath:dados.properties")
+    public class ArquivoDeConfiguracao {
+        
+        @Bean
+        Dica dicaDoTecnico () {
+            return new DicaDoTecnico();
+        }
+        
+        @Bean
+        Tecnico tecnicoDeFutebol () {
+            return new TecnicoDeFutebol(dicaDoTecnico());
+        }
+    
+    }
+
+**TecnicoDeFutebol.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.beans.factory.annotation.Value;
+    
+    public class TecnicoDeFutebol implements Tecnico {
+        
+        private Dica dica;
+        
+        @Value("${foo.email}")
+        private String email;
+        
+        @Value("${foo.cidade}")
+        private String cidade;
+    
+        public TecnicoDeFutebol(Dica dica) {
+            this.dica = dica;
+        }
+        
+        public String getEmail() {
+            return email;
+        }
+    
+        public String getCidade() {
+            return cidade;
+        }
+    
+        @Override
+        public String getTarefa() {
+            return "Correr 5km";
+        }
+    
+        @Override
+        public String getDica() {
+            return dica.getDica();
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.spring1;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ArquivoDeConfiguracao.class);
+            
+            TecnicoDeFutebol oTecnico = context.getBean("tecnicoDeFutebol", TecnicoDeFutebol.class);
+            
+            System.out.println(oTecnico.getTarefa());
+            System.out.println(oTecnico.getDica());
+            
+            System.out.println(oTecnico.getEmail());
+            System.out.println(oTecnico.getCidade());
             
             context.close();
     
