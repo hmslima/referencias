@@ -54,6 +54,40 @@
 
 * [Hibernate](#hibernate)
 
+	* [Configuração](#hibernate_config)
+
+	* [Testando a conexão JDBC](#hibernate_jdbc)
+
+	* [Arquivo de configuração do Hibernate](#hibernate_configfile)
+
+	* [Anotações do Hibernate](#hibernate_annotations)
+
+	* [CRUD](#hibernate_crud)
+
+		* [Criação](#hibernate_crud_c)
+
+		* [Leitura](#hibernate_crud_r)
+
+		* [Atualização](#hibernate_crud_u)
+
+		* [Deleção](#hibernate_crud_u)
+
+	* [Querying](#hibernate_querying)
+
+	* [Trabalhando com datas](#hibernate_datas)
+
+	* [Mappings avançados](#hibernate_mappings)
+
+		* [@OneToOne unidirecional](#hibernate_mappings_onetooneuni)
+
+		* [@OneToOne bidirecional](#hibernate_mappings_onetoonebi)
+
+		* [@OneToMany bidirecional](#hibernate_mappings_onetomanybi)
+
+		* [Eager Loading x Lazy Loading](#hibernate_mappings_fetching)
+
+		* [@ManyToMany](#hibernate_mappings_manytomany)
+
 
 # Introdução<span id="intro"></span>
 
@@ -1357,6 +1391,24 @@ E no log tinha:
 
 Se você se deparar com este erro e tiver certeza que seu código está correto, tente criar um novo Workspace no Eclipse.
 
+Outra solução mais elegante é:
+
+1. Remover o projeto do Eclipse
+
+2. Abrir a pasta *(com seu gerenciador de arquivos mesmo)* e remover todos os arquivos e pastas com exceção de `src`
+
+3. Abrir o projeto no Eclipse
+
+4. Clicar com o botão direito do mouse sobre o projeto e ir em `Properties`.
+
+5. Verificar se o `Java Build Path`, `Java Compiler`, `Project Facets` estão usando a mesma versão do Java
+
+6. Removee o servidor da tab `Servers` e adicioná-lo novamente.
+
+7. Reconstruir o projeto
+
+8. `Run on Server`.
+
 ## Formulários<span id="springmvc_forms"></span>
 
 Modifique o arquivo `home.jsp`:
@@ -2143,3 +2195,2578 @@ Apliquei a verificação apenas no campo nome, mas podemos burlar essa verifica�
 `@InitBinder` pré-processa todas as requisições web que vão ao *Controller*. O `StringTrimmerEditor` é definido pela Spring API e remove os espaços em branco.
 
 # Hibernate<span id="hibernate"></span>
+
+*Eu já fiz um tutorial sobre [JPA/Hibernate](JPA-Hibernate.md), mas escrevo este novo em um capítulo para usar a abordagem de outra fonte de estudo. Mas leia antes esse material que fiz para o JPA/Hibernate para que eu não repita informações aqui.*
+
+*Também seria interessante saber [SQL](SQL.md)*
+
+## Configuração<span id="hibernate_config"></span>
+
+Assumirei que você já tem o MySQL instalado. Use os seguintes comandos:
+
+***Cria o usuário estudante***
+
+    CREATE USER 'estudante'@'localhost' IDENTIFIED BY 'estudante';
+    GRANT ALL PRIVILEGES ON * .* TO 'estudante'@'localhost';
+
+Entre de novo no MySQL com a conta `estudante` e use o conjunto de códigos abaixo:
+
+    CREATE DATABASE IF NOT EXISTS `estudantebd`;
+    USE `estudantebd`;
+    DROP TABLE IF EXISTS `estudante`;
+    CREATE TABLE `estudante` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+
+No Eclipse, você pode estar na perspectiva normal do Java se você quiser.
+
+`File` => `New` => `Java Project`
+
+Dê o nome que você quiser, simplesmente chamarei o meu de `hibernate`. Depois, clique com o botão direito do mouse sobre o nome do projeto e peça para criar uma nova pasta, chame-a de `lib`.
+
+Vá até o site do [Hibernate/ORM](https://hibernate.org/orm/) para baixar os JARs do Hibernate. Se você não achar onde baixar o arquivo .zip contendo os JARs, vá na [página Source Forge do Hibernate](https://sourceforge.net/projects/hibernate/files/), em "_hibernate-orm_". Extraimos os arquivos do arquivo .zip, vou na pasta `lib` do arquivo baixado, depois em `required`, copie todos os arquivos JAR de lá e ponha-os dentro da pasta `lib` do **seu** projeto.
+
+Agora precisamos baixar o *driver* do JDBC *(a página de download [é esta](https://dev.mysql.com/downloads/connector/j/))*, escolha a opção `Platform independent`. Ponha o arquivo JAR dentro da pasta `lib` do seu projeto.
+
+Você já sabe como adicionar os arquivos JAR no ClassPath.
+
+## Testando a conexão JDBC<span id="hibernate_jdbc"></span>
+
+Vamos ver se tudo está funcionando. Crei um pacote chamado `dominio.jdbc`. Dentro desse pacote crie uma classe chamada `TestarJdbc` com o método main.
+
+    package dominio.jdbc;
+    
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    
+    public class TestarJdbc {
+    
+        public static void main(String[] args) {
+            
+            String urlJDBC = "jdbc:mysql://localhost:3306/estudantebd?useSSL=false&serverTimezone=UTC";
+            String usuario = "estudante";
+            String senha = "estudante";
+            
+            try {
+                
+                Connection conn = DriverManager.getConnection(urlJDBC, usuario, senha);
+                
+                System.out.println("Conexão realizada com sucesso");
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    
+        }
+    
+    }
+
+Se você viu a mensagem _"Conexão realizada com sucesso"_ no console, isso significa que tudo está funcionando bem até aqui.
+
+## Arquivo de configuração do Hibernate<span id="hibernate_configfile"></span>
+
+Crie o arquivo `hibernate.cfg.xml` na pasta `src`.
+
+    <!DOCTYPE hibernate-configuration PUBLIC
+            "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+            "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+    
+    <hibernate-configuration>
+    
+        <session-factory>
+    
+            <!-- Configurações de conexão do JDBC Database -->
+            <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+            <property name="connection.url">jdbc:mysql://localhost:3306/estudantebd?useSSL=false</property>
+            <property name="connection.username">estudante</property>
+            <property name="connection.password">estudante</property>
+    
+            <!-- Configurações do JDBC connection pool ... usando test pool integrado -->
+            <property name="connection.pool_size">1</property>
+    
+            <!-- Seleciona o dialeto de SQL -->
+            <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+    
+            <!-- Ecoa o SQL para stdout -->
+            <property name="show_sql">true</property>
+    
+            <!-- Define o atual contexto de sessão -->
+            <property name="current_session_context_class">thread</property>
+     
+        </session-factory>
+    
+    </hibernate-configuration>
+
+## Anotações do Hibernate<span id="hibernate_annotations"></span>
+
+Crie o pacote `dominio.hibernate.entity`. Dentro dele crie a classe `Estudante`.
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="estudante")
+    public class Estudante {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        public Estudante () {
+            
+        }
+    
+        public Estudante(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        // Apenas pra debug...
+        @Override
+        public String toString() {
+            return "Estudante [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+        
+    }
+
+O Eclipse perguntará qual pacote importar, sempre escolha `javax.persistence`, porque JPA é a especificação padrão enquanto Hibrnate é a implementação, até mesmo o time do Hibernate sugere o uso das anotações do JPA como boa prática.
+
+`@Entity` marca uma classe Java para ser mapeada numa tabela de banco de dados.
+
+## CRUD<span id="hibernate_crud"></span>
+
+### Criação<span id="hibernate_crud_c"></span>
+
+Clique com o botão direito em `src` e crie a classe `CriarEstudante` no pacote `dominio.hibernate` *(preste atenção no nome do pacote)*.
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class CriarEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                Estudante estudanteTemp = new Estudante("Tião", "Trovão", "danadinha@gmail.com.br");
+                
+                session.beginTransaction();
+                
+                session.save(estudanteTemp);
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+* **SessionFactory:** lê o arquivo de configuração, se conecta com o banco de dados, cria objetos de sessão e é um objeto pesado que é criado uma única vez no projeto.
+
+* **Session:** é um envoltório de uma conexão JDBC, é um objeto principal usado para salvar ou recuperar outros objetos e tem vida curta.
+
+A propósito, você não precisaria definir o arquivo XML na definição do objeto de SessionFactory, poderia ser assim:
+
+    SessionFactory factory = new Configuration()
+                             .configure()
+                             .addAnnotatedClass(Estudante.class)
+                             .buildSessionFactory();
+
+Quando não definimos o arquivo XML, o próprio Hibernate automaticamente procura pelo arquivo `hibernate.cfg.xml`.
+
+### Leitura<span id="hibernate_crud_r"></span>
+
+Adicione mais alguns dados, só para nos ajudar em nossos testes. Se você quiser já uns dados prontos para agilizar, já preparei alguns pra você.
+
+    INSERT INTO estudante VALUES(null, "Marcela", "Cardoso", "ma@bol.com.br");
+    INSERT INTO estudante VALUES(null, "Gerônimo", "de Jesus", "geronimo@terra.com.br");
+    INSERT INTO estudante VALUES(null, "Tália", "Amorim", "tamorim@hotmal.com");
+    INSERT INTO estudante VALUES(null, "Gizele", "Lima", "gil@hotmail.com");
+    INSERT INTO estudante VALUES(null, "Mateus", "Amorim", "mat@hotmail.com");
+
+Crie a classe `LerEstudante` no pacote `dominio.hibernate`.
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class LerEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                Estudante estudanteTemp = session.find(Estudante.class, 2); // Procura a pessoa da tabela Funcionario cujo Id é 2
+                
+                System.out.println(estudanteTemp);
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+### Atualização<span id="hibernate_crud_u"></span>
+
+Crie a classe `AtualizarEstudante` no pacote `dominio.hibernate`.
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class AtualizarEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                Estudante estudanteTemp = session.find(Estudante.class, 2); // Procura a pessoa da tabela Funcionario cujo Id é 2
+                
+                estudanteTemp.setNome("Pedro");
+                
+                session.getTransaction().commit(); // Se não coloco esta linha, você até vê a atualização no console, mas a atualização não é feita no banco de dados
+                
+                System.out.println(estudanteTemp);
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+### Deleção<span id="hibernate_crud_d"></span>
+
+Crie a classe `DeletarEstudante` no pacote `dominio.hibernate`.
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class DeletarEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                Estudante estudanteTemp = session.find(Estudante.class, 2); // Procura a pessoa da tabela Funcionario cujo Id é 2
+                
+                session.delete(estudanteTemp);
+                
+                session.getTransaction().commit(); // Se não coloco esta linha, a deleção não terá efeito
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+## Querying<span id="hibernate_querying"></span>
+
+Vamos dizer quero encontrar todos os estudantes que têm os sobrenome "Amorim" e "de Jesus". Espero que você tenha adicionado os dados que sugeri.
+
+Crie a classe `QueryEstudante` no pacote `dominio.hibernate` *(preste atenção no nome do pacote)*.
+
+    package dominio.hibernate;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class QueryEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                // Mostra todos os estudantes
+                List<Estudante> estudantes = session.createQuery("from Estudante").getResultList();
+                for (Estudante estudanteTemp : estudantes) {
+                    System.out.println(estudanteTemp);
+                }
+                
+                System.out.println("-------------------"); // Só um separador
+                
+                // Mostra todos os estudantes cujos sobrenomes sejam "Amorim" ou "de Jesus"
+                estudantes = session.createQuery("from Estudante est where"
+                                + " est.sobrenome='Amorim' OR est.sobrenome='de Jesus'").getResultList();
+                for (Estudante estudanteTemp : estudantes) {
+                    System.out.println(estudanteTemp);
+                }
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Sugiro que você leia sobre ***Hibernate Query Language***.
+
+E é claro que podemos fazer outras operações de CRUD com query. Vejamos um exemplo em que deleto um estudante cujo `id` seja 3.
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class DeletarEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                session.createQuery("delete from Estudante where id=3").executeUpdate();
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+## Trabalhando com datas<span id="hibernate_datas"></span>
+
+Vamos deletar a tabela antiga e criar uma nova:
+
+    DROP TABLE IF EXISTS `estudante`;
+    CREATE TABLE `estudante` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      `nascimento` DATETIME DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+
+Também vamos adicionar novos valores:
+
+    INSERT INTO estudante VALUES(null, "Marcela", "Cardoso", "ma@bol.com.br", "2008-05-21");
+    INSERT INTO estudante VALUES(null, "Gerônimo", "de Jesus", "geronimo@terra.com.br", "2008-04-11");
+    INSERT INTO estudante VALUES(null, "Tália", "Amorim", "tamorim@hotmal.com", "2007-08-01");
+    INSERT INTO estudante VALUES(null, "Gizele", "Lima", "gil@hotmail.com", "2008-10-06");
+    INSERT INTO estudante VALUES(null, "Mateus", "Amorim", "mat@hotmail.com", "2009-01-10");
+    INSERT INTO estudante VALUES(null, "Rogério", "Vasconcelos", "mat@hotmail.com", "2008-04-15");
+
+Vamos atualizar a classe `CriarEstudante`:
+
+    package dominio.hibernate;
+    
+    import java.text.SimpleDateFormat;
+    import java.util.Date;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Estudante;
+    
+    public class CriarEstudante {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Estudante.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            // Criamos a data aqui
+            Date dataDeNascimento = new Date();
+            SimpleDateFormat formatador = new SimpleDateFormat("dd/MM/yyyy");
+            try {
+                dataDeNascimento = formatador.parse("20/08/2008");
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            
+            // Agora criamos o estudante em si
+            try {
+                
+                Estudante estudanteTemp = new Estudante("Maria", "Conceição", "macao@uol.com.br", dataDeNascimento);
+                
+                session.beginTransaction();
+                
+                session.save(estudanteTemp);
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+## Mappings avançados<span id="hibernate_mappings"></span>
+
+Reutilizaremos o projeto criado no capítulo anterior, portanto você pode copiá-lo ou atualizá-lo, fica a seu critério.
+
+### @OneToOne unidirecional<span id="hibernate_mappings_onetooneuni"></span>
+
+Faça esta operação SQL:
+
+    DROP SCHEMA IF EXISTS `hb-one-to-one-uni`;
+    
+    CREATE SCHEMA `hb-one-to-one-uni`;
+    
+    USE `hb-one-to-one-uni`;
+    
+    SET FOREIGN_KEY_CHECKS = 0;
+    
+    DROP TABLE IF EXISTS `chefe_detalhe`;
+    
+    CREATE TABLE `chefe_detalhe` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `cargo` varchar(128) DEFAULT NULL,
+      `departamento` varchar(128) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    DROP TABLE IF EXISTS `chefe`;
+    
+    CREATE TABLE `chefe` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      `chefe_detalhe_id` int(11) DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      KEY `FK_DETALHE_idx` (`chefe_detalhe_id`),
+      CONSTRAINT `FK_DETALHE` FOREIGN KEY (`chefe_detalhe_id`) REFERENCES `chefe_detalhe` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    SET FOREIGN_KEY_CHECKS = 1;
+
+Teste pra ver se o *schema* está funcionando OK.
+
+    package dominio.jdbc;
+    
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    
+    public class TestarJdbc {
+    
+        public static void main(String[] args) {
+            
+            String urlJDBC = "jdbc:mysql://localhost:3306/hb-one-to-one-uni?useSSL=false&serverTimezone=UTC";
+            String usuario = "estudante";
+            String senha = "estudante";
+            
+            try {
+                
+                Connection conn = DriverManager.getConnection(urlJDBC, usuario, senha);
+                
+                System.out.println("Conexão realizada com sucesso");
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    
+        }
+    
+    }
+
+Atualize o arquivo `hibernate.cfg.xml`:
+
+    <!DOCTYPE hibernate-configuration PUBLIC
+            "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+            "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+    
+    <hibernate-configuration>
+    
+        <session-factory>
+    
+            <!-- Configurações de conexão do JDBC Database -->
+            <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+            <property name="connection.url">jdbc:mysql://localhost:3306/hb-one-to-one-uni?useSSL=false</property>
+            <property name="connection.username">estudante</property>
+            <property name="connection.password">estudante</property>
+    
+            <!-- Configurações do JDBC connection pool ... usando test pool integrado -->
+            <property name="connection.pool_size">1</property>
+    
+            <!-- Seleciona o dialeto de SQL -->
+            <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+    
+            <!-- Ecoa o SQL para stdout -->
+            <property name="show_sql">true</property>
+    
+            <!-- Define o atual contexto de sessão -->
+            <property name="current_session_context_class">thread</property>
+     
+        </session-factory>
+    
+    </hibernate-configuration>
+
+Dentro do pacote `dominio.hibernate.entity`, crie os arquivos:
+
+**ChefeDetalhe.java**
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="chefe_detalhe")
+    public class ChefeDetalhe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="cargo")
+        private String cargo;
+        
+        @Column(name="departamento")
+        private String departamento;
+        
+        public ChefeDetalhe () {
+            
+        }
+    
+        public ChefeDetalhe(String cargo, String departamento) {
+            this.cargo = cargo;
+            this.departamento = departamento;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getCargo() {
+            return cargo;
+        }
+    
+        public void setCargo(String cargo) {
+            this.cargo = cargo;
+        }
+    
+        public String getDepartamento() {
+            return departamento;
+        }
+    
+        public void setDepartamento(String departamento) {
+            this.departamento = departamento;
+        }
+        
+    }
+
+**Chefe.java**
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="chefe")
+    public class Chefe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        @OneToOne(cascade=CascadeType.ALL)
+        @JoinColumn(name="chefe_detalhe_id")
+        private ChefeDetalhe chefeDetalhe;
+        
+        public Chefe () {
+            
+        }
+    
+        public Chefe(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public ChefeDetalhe getChefeDetalhe() {
+            return chefeDetalhe;
+        }
+    
+        public void setChefeDetalhe(ChefeDetalhe chefeDetalhe) {
+            this.chefeDetalhe = chefeDetalhe;
+        }
+
+        @Override
+        public String toString() {
+            return "Chefe [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email
+                    + ", chefeDetalhe=" + chefeDetalhe + "]";
+        }
+        
+    }
+
+*Por padrão, nenhuma operação é encadeada (cascaded).*
+
+Dentro do pacote `dominio.hibernate`, crie os arquivos:
+
+**CriarChefe.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    
+    public class CriarChefe {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class) // Repare nesta novidade
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                Chefe chefTemp = new Chefe("Marcelo", "Guimarães", "marcelo@gmail.com.br");
+                
+                ChefeDetalhe chefDetalheTemp = new ChefeDetalhe("Diretor comercial", "Vendas");
+                
+                chefTemp.setChefeDetalhe(chefDetalheTemp);
+                
+                session.beginTransaction();
+                
+                // Automaticamente salvará chefDetalheTemp por causa de CascadeType.ALL
+                session.save(chefTemp);
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+**DeletarChefe.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    
+    public class DeletarChefe {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class) // Repare nesta novidade também
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {            
+                session.beginTransaction();
+                
+                Chefe chefTemp = session.find(Chefe.class, 1);
+                
+                if (chefTemp != null) {
+                    // Automaticamente deletará chefDetalheTemp por causa de CascadeType.ALL
+                    session.delete(chefTemp);
+                }
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Pronto, agora rode a classe `CriarChefe`, veja o resultado no banco de dados, depois rode a classe `DeletarChefe` e veja o resultado.
+
+### @OneToOne bidirecional<span id="hibernate_mappings_onetoonebi"></span>
+
+Pra criar um relacionamento bidirecional, atualize o arquivo `ChefeDetalhe.java`:
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="chefe_detalhe")
+    public class ChefeDetalhe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="cargo")
+        private String cargo;
+        
+        @Column(name="departamento")
+        private String departamento;
+        
+        @OneToOne(mappedBy="chefeDetalhe", cascade=CascadeType.ALL) // Esse objeto chamado chefeDetalhe tem que estar na classe Chefe
+        private Chefe chefe;
+        
+        public ChefeDetalhe () {
+            
+        }
+    
+        public ChefeDetalhe(String cargo, String departamento) {
+            this.cargo = cargo;
+            this.departamento = departamento;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getCargo() {
+            return cargo;
+        }
+    
+        public void setCargo(String cargo) {
+            this.cargo = cargo;
+        }
+    
+        public String getDepartamento() {
+            return departamento;
+        }
+    
+        public void setDepartamento(String departamento) {
+            this.departamento = departamento;
+        }
+    
+        public Chefe getChefe() {
+            return chefe;
+        }
+    
+        public void setChefe(Chefe chefe) {
+            this.chefe = chefe;
+        }
+    
+        @Override
+        public String toString() {
+            return "ChefeDetalhe [id=" + id + ", cargo=" + cargo + ", departamento=" + departamento + "]";
+        }
+        
+    }
+
+E crie a classe `VerChefeDetalhe`:
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    
+    public class VerChefeDetalhe {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {            
+                session.beginTransaction();
+                
+                ChefeDetalhe chefDetalheTemp = session.find(ChefeDetalhe.class, 2);
+                
+                System.out.println(chefDetalheTemp);
+                System.out.println(chefDetalheTemp.getChefe());
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Eu ia colocar o código aqui para deletar o objeto de `ChefeDetalhe` junto do objeto de `Chefe` *(lembre-se, estão todos encadeados)*, mas você já sabe como fazer esse código. Vamos seguir em frente e ver como deletar apenas o objeto de `ChefeDetalhe` e manter o objeto de `Chefe`. É simples, vá até o arquivo `ChefeDetalhe.java` e mudar a linha...
+
+    @OneToOne(mappedBy="chefeDetalhe", cascade=CascadeType.ALL)
+
+...para:
+
+	@OneToOne(mappedBy="chefeDetalhe", cascade={CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST,
+				CascadeType.REFRESH})
+
+Ou seja, acontecerá tudo com os dois ao mesmo tempo, exceto deleção *(que seria gerida pelo código `CascadeType.REMOVE` que não está ali)*.
+
+E na classe que você usará para executar o código de deleção, você fará assim:
+
+    [...]
+    session.beginTransaction();
+    
+    ChefeDetalhe chefeDetalheTemp = session.find(ChefeDetalhe.class, 2);
+    
+    // Quebra a ligação
+    chefeDetalheTemp.getChefe().setChefeDetalhe(null);
+    
+    // Agora podemos remover apenas o objeto de ChefeDetalhe com segurança
+    session.remove(chefeDetalheTemp);
+    
+    session.getTransaction().commit();
+    [..]
+
+### @OneToMany bidirecional<span id="hibernate_mappings_onetomanybi"></span>
+
+Primeiro vamos mexer no banco de dados.
+
+    DROP SCHEMA IF EXISTS `hb-one-to-many`;
+    
+    CREATE SCHEMA `hb-one-to-many`;
+    
+    USE `hb-one-to-many`;
+    
+    SET FOREIGN_KEY_CHECKS = 0;
+    
+    DROP TABLE IF EXISTS `chefe_detalhe`;
+    
+    CREATE TABLE `chefe_detalhe` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `cargo` varchar(128) DEFAULT NULL,
+      `departamento` varchar(128) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    DROP TABLE IF EXISTS `chefe`;
+    
+    CREATE TABLE `chefe` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      `chefe_detalhe_id` int(11) DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      KEY `FK_DETALHE_idx` (`chefe_detalhe_id`),
+      CONSTRAINT `FK_DETALHE` FOREIGN KEY (`chefe_detalhe_id`)
+      REFERENCES `chefe_detalhe` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    SET FOREIGN_KEY_CHECKS = 1;
+    
+    CREATE TABLE `empregado` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(128) DEFAULT NULL,
+      `chefe_id` int(11) DEFAULT NULL,
+      
+      PRIMARY KEY (`id`),
+      
+      UNIQUE KEY `TITLE_UNIQUE` (`nome`),
+      
+      KEY `FK_CHEFE_idx` (`chefe_id`),
+      
+      CONSTRAINT `FK_CHEFE` 
+      FOREIGN KEY (`chefe_id`) 
+      REFERENCES `chefe` (`id`) 
+      
+      ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
+    
+    
+    SET FOREIGN_KEY_CHECKS = 1;
+
+Vamos criar o nosso novo chefe:
+
+Atualize:
+
+**hibernate.cfg.xml**
+
+    <!DOCTYPE hibernate-configuration PUBLIC
+            "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+            "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+    
+    <hibernate-configuration>
+    
+        <session-factory>
+    
+            <!-- Configurações de conexão do JDBC Database -->
+            <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+            <property name="connection.url">jdbc:mysql://localhost:3306/hb-one-to-many?useSSL=false</property>
+            <property name="connection.username">estudante</property>
+            <property name="connection.password">estudante</property>
+    
+            <!-- Configurações do JDBC connection pool ... usando test pool integrado -->
+            <property name="connection.pool_size">1</property>
+    
+            <!-- Seleciona o dialeto de SQL -->
+            <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+    
+            <!-- Ecoa o SQL para stdout -->
+            <property name="show_sql">true</property>
+    
+            <!-- Define o atual contexto de sessão -->
+            <property name="current_session_context_class">thread</property>
+     
+        </session-factory>
+    
+    </hibernate-configuration>
+
+Em `dominio.hibernate.entity`, crie:
+
+**Empregado.class**
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.ManyToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="empregado")
+    public class Empregado {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @ManyToOne(cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                 CascadeType.DETACH, CascadeType.REFRESH})
+        @JoinColumn(name="chefe_id")
+        private Chefe chefe;
+        
+        public Empregado () {
+            
+        }
+    
+        public Empregado(String nome) {
+            this.nome = nome;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public Chefe getChefe() {
+            return chefe;
+        }
+    
+        public void setChefe(Chefe chefe) {
+            this.chefe = chefe;
+        }
+    
+        @Override
+        public String toString() {
+            return "Empregado [id=" + id + ", nome=" + nome + "]";
+        }
+    
+    }
+
+E atualize:
+
+**Chefe.java**
+
+    package dominio.hibernate.entity;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.OneToMany;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="chefe")
+    public class Chefe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        @OneToOne(cascade=CascadeType.ALL)
+        @JoinColumn(name="chefe_detalhe_id")
+        private ChefeDetalhe chefeDetalhe;
+        
+        @OneToMany(mappedBy="chefe", // Se refere ao objeto chamado chefe criado na classe Empregado
+                cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                         CascadeType.DETACH, CascadeType.REFRESH}) // Observe que não tem CascadeType.REMOVE
+        private List<Empregado> empregados;
+        
+        public Chefe () {
+            
+        }
+    
+        public Chefe(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public ChefeDetalhe getChefeDetalhe() {
+            return chefeDetalhe;
+        }
+    
+        public void setChefeDetalhe(ChefeDetalhe chefeDetalhe) {
+            this.chefeDetalhe = chefeDetalhe;
+        }
+    
+        public List<Empregado> getEmpregados() {
+            return empregados;
+        }
+    
+        public void setEmpregados(List<Empregado> empregados) {
+            this.empregados = empregados;
+        }
+        
+        public void contratar(Empregado empregadoTemp) {
+            if (empregados == null) {
+                empregados = new ArrayList<>();
+            }
+            
+            empregados.add(empregadoTemp);
+            
+            empregadoTemp.setChefe(this);
+        }
+    
+        @Override
+        public String toString() {
+            return "Chefe [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email
+                    + ", chefeDetalhe=" + chefeDetalhe + "]";
+        }
+        
+    }
+
+Em `dominio.hibernate`, atualize:
+
+**CriarChefe.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    import dominio.hibernate.entity.Empregado;
+    
+    public class CriarChefe {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure()
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class)
+                                     .addAnnotatedClass(Empregado.class) // Olha esta novidade aqui
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                Chefe chefTemp = new Chefe("Honório", "Smith", "honorio@gmail.com.br");
+                
+                ChefeDetalhe chefDetalheTemp = new ChefeDetalhe("Presidente", "Geral");
+                
+                chefTemp.setChefeDetalhe(chefDetalheTemp);
+                
+                session.beginTransaction();
+                
+                session.save(chefTemp);
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Agora vamos criar um empregado. Crie e execute o seguinte arquivo no pacote `dominio.hibernate`:
+
+**CriarEmpregados.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    import dominio.hibernate.entity.Empregado;
+    
+    public class CriarEmpregados {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure()
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class)
+                                     .addAnnotatedClass(Empregado.class) // Olha esta novidade aqui
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {
+                
+                session.beginTransaction();
+                
+                Chefe chefeTemp = session.get(Chefe.class, 1);
+                
+                Empregado empregadoTemp1 = new Empregado("Iara Brandão");
+                Empregado empregadoTemp2 = new Empregado("Cuca Beludo");
+                
+                chefeTemp.contratar(empregadoTemp1);
+                chefeTemp.contratar(empregadoTemp2);
+                
+                session.save(empregadoTemp1);
+                session.save(empregadoTemp2);
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+            	session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Para visualizar, vamos criar a classe `VerEmpregados` no pacote `dominio.hibernate`:
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    import dominio.hibernate.entity.Empregado;
+    
+    public class VerEmpregados {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class)
+                                     .addAnnotatedClass(Empregado.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {            
+                session.beginTransaction();
+                
+                Chefe chefeTemp = session.find(Chefe.class, 1);
+                
+                // System.out.println(chefeTemp.getEmpregados()); // Esse também serviria, mas um for loop dá uma informação mais limpa
+                
+                for (Empregado empregado : chefeTemp.getEmpregados()) {
+                	System.out.println(empregado);
+                }
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+### Eager Loading x Lazy Loading<span id="hibernate_mappings_fetching"></span>
+
+* **Eager Loading:** acessa todos os dados, vai carregar todas as *entities* de uma só vez. Pode dá problemas de performance.
+
+* **Lazy Loading:** acessa dados por demanda. Sempre prefira este modo
+
+Um exemplo de uso:
+
+    @OneToOne(fetch=FetchType.LAZY)
+
+Vejamos os valores padrão:
+
+| Mapping     | Tipo de Fetching |
+| ----------- | ---------------- |
+| @OneToOne   | FetchType.EAGER  |
+| @OneToMany  | FetchType.LAZY   |
+| @ManyToOne  | FetchType.EAGER  |
+| @ManyToMany | FetchType.LAZY   |
+
+Modifique a classe `Chefe`:
+
+    package dominio.hibernate.entity;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.FetchType;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.OneToMany;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="chefe")
+    public class Chefe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        @OneToOne(cascade=CascadeType.ALL)
+        @JoinColumn(name="chefe_detalhe_id")
+        private ChefeDetalhe chefeDetalhe;
+        
+        @OneToMany(fetch=FetchType.EAGER,
+                mappedBy="chefe", // Se refere ao objeto chamado chefe criado na classe Empregado
+                cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                         CascadeType.DETACH, CascadeType.REFRESH}) // Observe que não tem CascadeType.REMOVE
+        private List<Empregado> empregados;
+        
+        public Chefe () {
+            
+        }
+    
+        public Chefe(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public ChefeDetalhe getChefeDetalhe() {
+            return chefeDetalhe;
+        }
+    
+        public void setChefeDetalhe(ChefeDetalhe chefeDetalhe) {
+            this.chefeDetalhe = chefeDetalhe;
+        }
+    
+        public List<Empregado> getEmpregados() {
+            return empregados;
+        }
+    
+        public void setEmpregados(List<Empregado> empregados) {
+            this.empregados = empregados;
+        }
+        
+        public void contratar(Empregado empregadoTemp) {
+            if (empregados == null) {
+                empregados = new ArrayList<>();
+            }
+            
+            empregados.add(empregadoTemp);
+            
+            empregadoTemp.setChefe(this);
+        }
+    
+        @Override
+        public String toString() {
+            return "Chefe [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email
+                    + ", chefeDetalhe=" + chefeDetalhe + "]";
+        }
+        
+    }
+
+E modifique também `VerEmpregados`:
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Chefe;
+    import dominio.hibernate.entity.ChefeDetalhe;
+    import dominio.hibernate.entity.Empregado;
+    
+    public class VerEmpregados {
+    
+        public static void main(String[] args) {
+            
+            SessionFactory factory = new Configuration()
+                                     .configure("hibernate.cfg.xml")
+                                     .addAnnotatedClass(Chefe.class)
+                                     .addAnnotatedClass(ChefeDetalhe.class)
+                                     .addAnnotatedClass(Empregado.class)
+                                     .buildSessionFactory();
+            
+            Session session = factory.getCurrentSession();
+            
+            try {            
+                session.beginTransaction();
+                
+                Chefe chefeTemp = session.find(Chefe.class, 1);
+                
+                System.out.println("Nosso código (chefeTemp): " + chefeTemp); // Adicionei essas linhas "Nosso código" só para ajudar na visualização
+                
+                System.out.println("---------------");
+                
+                System.out.println("Nosso código (chefeTemp.getEmpregados()): " + chefeTemp.getEmpregados());
+                
+                session.getTransaction().commit();
+                
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+            	session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Para que você entenda como funciona, sugiro que você ponha um *breakpoint* na linha `System.out.println(chefeTemp);` e mude para o mode de *debug*. Repare que, na linha `System.out.println(chefeTemp);`, tudo é carregado de uma vez. *Naturalmente que essa não é a melhor prática, mas foi pra demonstrar pra você*.
+
+Agora volte para a classe `Chefe` e mude a linha...
+
+    @OneToMany(fetch=FetchType.EAGER,
+
+para:
+
+    @OneToMany(fetch=FetchType.LAZY,
+
+Agora volte a rodar o código em modo *debug*.
+
+### @ManyToMany<span id="hibernate_mappings_manytomany"></span>
+
+Nesse tipo de relação, usamos uma *Join Table*, uma tabela especial que mantém uma relação especial entre as tabelas envolvidas. Uma *Join Table* provê *mappings* entre as duas tabelas e tem *foreign keys* de cada tabela.
+
+Primeiro vamos mexer no banco de dados:
+
+    DROP SCHEMA IF EXISTS `hb-many-to-many`;
+    
+    CREATE SCHEMA `hb-many-to-many`;
+    
+    USE `hb-many-to-many`;
+    
+    SET FOREIGN_KEY_CHECKS = 0;
+    
+    DROP TABLE IF EXISTS `professor_detalhe`;
+    
+    CREATE TABLE `professor_detalhe` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `disciplina` varchar(128) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    DROP TABLE IF EXISTS `professor`;
+    
+    CREATE TABLE `professor` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      `professor_detalhe_id` int(11) DEFAULT NULL,
+      PRIMARY KEY (`id`),
+      KEY `FK_DETALHE_idx` (`instructor_detail_id`),
+      CONSTRAINT `FK_DETALHE` FOREIGN KEY (`professor_detalhe_id`) 
+      REFERENCES `professor_detalhe` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    DROP TABLE IF EXISTS `curso`;
+    
+    CREATE TABLE `curso` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(128) DEFAULT NULL,
+      `professor_id` int(11) DEFAULT NULL,
+      
+      PRIMARY KEY (`id`),
+      
+      UNIQUE KEY `NOME_UNICO` (`nome`),
+      
+      KEY `FK_PROFESSOR_idx` (`professor_id`),
+      
+      CONSTRAINT `FK_PROFESSOR` 
+      FOREIGN KEY (`professor_id`) 
+      REFERENCES `professor` (`id`) 
+      
+      ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
+    
+    
+    DROP TABLE IF EXISTS `avaliacao`;
+    
+    CREATE TABLE `avaliacao` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `comentario` varchar(256) DEFAULT NULL,
+      `curso_id` int(11) DEFAULT NULL,
+    
+      PRIMARY KEY (`id`),
+    
+      KEY `FK_CURSO_ID_idx` (`curso_id`),
+    
+      CONSTRAINT `FK_CURSO` 
+      FOREIGN KEY (`curso_id`) 
+      REFERENCES `curso` (`id`) 
+    
+      ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    DROP TABLE IF EXISTS `estudante`;
+    
+    CREATE TABLE `estudante` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    DROP TABLE IF EXISTS `curso_estudante`;
+    
+    CREATE TABLE `curso_estudante` (
+      `curso_id` int(11) NOT NULL,
+      `estudante_id` int(11) NOT NULL,
+      
+      PRIMARY KEY (`curso_id`,`estudante_id`),
+      
+      KEY `FK_ESTUDANTE_idx` (`curso_id`),
+      
+      CONSTRAINT `FK_CURSO_05` FOREIGN KEY (`curso_id`) 
+      REFERENCES `curso` (`id`) 
+      ON DELETE NO ACTION ON UPDATE NO ACTION,
+      
+      CONSTRAINT `FK_ESTUDANTE` FOREIGN KEY (`estudante_id`) 
+      REFERENCES `estudante` (`id`) 
+      ON DELETE NO ACTION ON UPDATE NO ACTION
+    ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+    
+    SET FOREIGN_KEY_CHECKS = 1;
+
+Pra este caso, vamos criar um novo projeto *(chame-o com quiser)*, só por quesãto de organização.
+
+Copie a pasta `lib` do projeto anterior para o novo projeto e instale os arquivos JAR no *ClassPath* do projeto.
+
+OK, vamos criar os arquivos agora:
+
+Em `src`:
+
+**hibernate.cfg.xml**
+
+    <!DOCTYPE hibernate-configuration PUBLIC
+            "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+            "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+    
+    <hibernate-configuration>
+    
+        <session-factory>
+    
+            <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+            <property name="connection.url">jdbc:mysql://localhost:3306/hb-many-to-many?useSSL=false</property>
+            <property name="connection.username">estudante</property>
+            <property name="connection.password">estudante</property>
+    
+            <property name="connection.pool_size">1</property>
+    
+            <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+    
+            <property name="show_sql">true</property>
+    
+            <property name="current_session_context_class">thread</property>
+     
+        </session-factory>
+    
+    </hibernate-configuration>
+
+No pacote `dominio.hibernate.entity`:
+
+**Avaliacao.java**
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="avaliacao")
+    public class Avaliacao {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="comentario")
+        private String comentario;
+        
+        public Avaliacao () {
+            
+        }
+    
+        public Avaliacao(String comentario) {
+            this.comentario = comentario;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getComentario() {
+            return comentario;
+        }
+    
+        public void setComentario(String comentario) {
+            this.comentario = comentario;
+        }
+    
+        @Override
+        public String toString() {
+            return "Avaliacao [id=" + id + ", comentario=" + comentario + "]";
+        }
+        
+    }
+
+**Curso.java**
+
+    package dominio.hibernate.entity;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.FetchType;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.JoinTable;
+    import javax.persistence.ManyToMany;
+    import javax.persistence.ManyToOne;
+    import javax.persistence.OneToMany;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="curso")
+    public class Curso {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @ManyToOne(cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                 CascadeType.DETACH, CascadeType.REFRESH})
+        @JoinColumn(name="professor_id")
+        private Professor professor;
+        
+        @OneToMany(fetch=FetchType.LAZY, cascade=CascadeType.ALL)
+        @JoinColumn(name="curso_id")
+        private List<Avaliacao> avaliacoes;
+        
+        @ManyToMany(fetch=FetchType.LAZY,
+                cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                 CascadeType.DETACH, CascadeType.REFRESH})
+        @JoinTable(
+                name="curso_estudante",
+                joinColumns=@JoinColumn(name="curso_id"),
+                inverseJoinColumns=@JoinColumn(name="estudante_id")
+                )    
+        private List<Estudante> estudantes;
+        
+        public Curso () {
+            
+        }
+    
+        public Curso(String nome) {
+            super();
+            this.nome = nome;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public Professor getProfessor() {
+            return professor;
+        }
+    
+        public void setProfessor(Professor professor) {
+            this.professor = professor;
+        }
+    
+        public List<Avaliacao> getAvaliacoes() {
+            return avaliacoes;
+        }
+    
+        public void setAvaliacoes(List<Avaliacao> avaliacoes) {
+            this.avaliacoes = avaliacoes;
+        }
+    
+        public List<Estudante> getEstudantes() {
+            return estudantes;
+        }
+    
+        public void setEstudantes(List<Estudante> estudantes) {
+            this.estudantes = estudantes;
+        }
+    
+        public void adicionarAvaliacao(Avaliacao aAvaliacao) {
+            if (avaliacoes == null) {
+                avaliacoes = new ArrayList<>();
+            }
+            
+            avaliacoes.add(aAvaliacao);
+        }
+        
+        public void adicionarEstudante(Estudante oEstudante) {
+            if (estudantes == null) {
+                estudantes = new ArrayList<>();
+            }
+            
+            estudantes.add(oEstudante);
+        }
+    
+        @Override
+        public String toString() {
+            return "Curso [id=" + id + ", nome=" + nome + "]";
+        }
+        
+    }
+
+**Estudante.java**
+
+package dominio.hibernate.entity;
+    
+    import java.util.List;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.FetchType;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.JoinTable;
+    import javax.persistence.ManyToMany;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="estudante")
+    public class Estudante {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        @ManyToMany(fetch=FetchType.LAZY,
+                cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                 CascadeType.DETACH, CascadeType.REFRESH})
+        @JoinTable(
+                name="curso_estudante",
+                joinColumns=@JoinColumn(name="estudante_id"),
+                inverseJoinColumns=@JoinColumn(name="curso_id")
+                )
+        private List<Curso> cursos;
+        
+        public Estudante () {
+            
+        }
+    
+        public Estudante(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public List<Curso> getCursos() {
+            return cursos;
+        }
+    
+        public void setCursos(List<Curso> cursos) {
+            this.cursos = cursos;
+        }
+    
+        @Override
+        public String toString() {
+            return "Estudante [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+        
+    }
+
+**ProfessorDetalhe.java**
+
+    package dominio.hibernate.entity;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="professor_detalhe")
+    public class ProfessorDetalhe {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="cargo")
+        private String cargo;
+        
+        @Column(name="departamento")
+        private String departamento;
+        
+        @OneToOne(mappedBy="professorDetalhe", cascade={CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST,
+                    CascadeType.REFRESH})
+        private Professor professor;
+        
+        public ProfessorDetalhe () {
+            
+        }
+    
+        public ProfessorDetalhe(String cargo, String departamento) {
+            this.cargo = cargo;
+            this.departamento = departamento;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getCargo() {
+            return cargo;
+        }
+    
+        public void setCargo(String cargo) {
+            this.cargo = cargo;
+        }
+    
+        public String getDepartamento() {
+            return departamento;
+        }
+    
+        public void setDepartamento(String departamento) {
+            this.departamento = departamento;
+        }
+    
+        public Professor getProfessor() {
+            return professor;
+        }
+    
+        public void setProfessor(Professor professor) {
+            this.professor = professor;
+        }
+    
+        @Override
+        public String toString() {
+            return "ProfessorDetalhe [id=" + id + ", cargo=" + cargo + ", departamento=" + departamento + "]";
+        }
+        
+    }
+
+**Professor.java**
+
+    package dominio.hibernate.entity;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.persistence.CascadeType;
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.FetchType;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.JoinColumn;
+    import javax.persistence.OneToMany;
+    import javax.persistence.OneToOne;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="professor")
+    public class Professor {
+            
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        @OneToOne(cascade=CascadeType.ALL)
+        @JoinColumn(name="professor_detalhe_id")
+        private ProfessorDetalhe professorDetalhe;
+        
+        @OneToMany(fetch=FetchType.LAZY,
+                mappedBy="professor",
+                cascade= {CascadeType.PERSIST, CascadeType.MERGE,
+                         CascadeType.DETACH, CascadeType.REFRESH})
+        private List<Curso> cursos;
+        
+        public Professor () {
+            
+        }
+    
+        public Professor(String nome, String sobrenome, String email) {
+            super();
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        public ProfessorDetalhe getProfessorDetalhe() {
+            return professorDetalhe;
+        }
+    
+        public void setProfessorDetalhe(ProfessorDetalhe professorDetalhe) {
+            this.professorDetalhe = professorDetalhe;
+        }
+    
+        public List<Curso> getCursos() {
+            return cursos;
+        }
+    
+        public void setCursos(List<Curso> cursos) {
+            this.cursos = cursos;
+        }
+    
+        @Override
+        public String toString() {
+            return "Professor [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email
+                    + ", professorDetalhe=" + professorDetalhe + "]";
+        }
+        
+        // Este método ajuda na relação bidirecional
+        public void adicionarCurso(Curso cursoTemp) {
+            
+            if (cursos == null) {
+                cursos = new ArrayList<>();
+            }
+            
+            cursos.add(cursoTemp);
+            
+            cursoTemp.setProfessor(this);
+        }
+        
+    }
+
+No pacote `dominio.hibernate`, crie e rode cada uma dessas classes:
+
+**CriarCursoEAvaliacao.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Avaliacao;
+    import dominio.hibernate.entity.Curso;
+    import dominio.hibernate.entity.Estudante;
+    import dominio.hibernate.entity.Professor;
+    import dominio.hibernate.entity.ProfessorDetalhe;
+    
+    public class CriarCursoEAvaliacao {
+    
+        public static void main(String[] args) {
+            SessionFactory factory = new Configuration()
+                    .configure("hibernate.cfg.xml")
+                    .addAnnotatedClass(Professor.class)
+                    .addAnnotatedClass(ProfessorDetalhe.class)
+                    .addAnnotatedClass(Curso.class)
+                    .addAnnotatedClass(Avaliacao.class)
+                    .addAnnotatedClass(Estudante.class)
+                    .buildSessionFactory();
+    
+            Session session = factory.getCurrentSession();
+            
+            try {            
+            
+                session.beginTransaction();
+                        
+                Curso cursoTemp = new Curso("Irrigação - Normas");
+                
+                cursoTemp.adicionarAvaliacao(new Avaliacao("Amei o curso, a professora explica muito bem"));
+                cursoTemp.adicionarAvaliacao(new Avaliacao("Legal!"));
+                cursoTemp.adicionarAvaliacao(new Avaliacao("Aprendi muito, parabéns!"));
+                        
+                session.save(cursoTemp);
+        
+                session.getTransaction().commit();
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+**CriarCursoEEstudantes.java**
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Avaliacao;
+    import dominio.hibernate.entity.Curso;
+    import dominio.hibernate.entity.Estudante;
+    import dominio.hibernate.entity.Professor;
+    import dominio.hibernate.entity.ProfessorDetalhe;
+    
+    public class CriarCursoEEstudantes {
+    
+        public static void main(String[] args) {
+            SessionFactory factory = new Configuration()
+                    .configure("hibernate.cfg.xml")
+                    .addAnnotatedClass(Professor.class)
+                    .addAnnotatedClass(ProfessorDetalhe.class)
+                    .addAnnotatedClass(Curso.class)
+                    .addAnnotatedClass(Avaliacao.class)
+                    .addAnnotatedClass(Estudante.class)
+                    .buildSessionFactory();
+    
+            Session session = factory.getCurrentSession();
+            
+            try {
+            
+                session.beginTransaction();
+                        
+                Curso cursoTemp = new Curso("Agricultura Orgânica - Como adubar o solo");
+                        
+                session.save(cursoTemp);
+                
+                Estudante estudanteTemp1 = new Estudante("Paula", "Rodrigues", "paula@gmail.com");
+                Estudante estudanteTemp2 = new Estudante("Cuca", "Beludo", "culudo@gmail.com");
+                        
+                cursoTemp.adicionarEstudante(estudanteTemp1);
+                cursoTemp.adicionarEstudante(estudanteTemp2);
+                
+                session.save(estudanteTemp1);
+                session.save(estudanteTemp2);
+        
+                session.getTransaction().commit();
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Veja o resultado no banco de dados:
+
+    SELECT * FROM estudante;
+    SELECT * FROM curso;
+    SELECT * FROM curso_estudante;
+    SELECT * FROM avaliacao;
+
+Agora vamos adicionar mais cursos para um estudante:
+
+    package dominio.hibernate;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.cfg.Configuration;
+    
+    import dominio.hibernate.entity.Avaliacao;
+    import dominio.hibernate.entity.Curso;
+    import dominio.hibernate.entity.Estudante;
+    import dominio.hibernate.entity.Professor;
+    import dominio.hibernate.entity.ProfessorDetalhe;
+    
+    public class AdicionarCursoParaEstudante {
+    
+        public static void main(String[] args) {
+            SessionFactory factory = new Configuration()
+                    .configure("hibernate.cfg.xml")
+                    .addAnnotatedClass(Professor.class)
+                    .addAnnotatedClass(ProfessorDetalhe.class)
+                    .addAnnotatedClass(Curso.class)
+                    .addAnnotatedClass(Avaliacao.class)
+                    .addAnnotatedClass(Estudante.class)
+                    .buildSessionFactory();
+    
+            Session session = factory.getCurrentSession();
+            
+            try {            
+            
+                session.beginTransaction();
+                        
+                Estudante tempStudent = session.get(Estudante.class, 2);
+                        
+                Curso cursoTemp1 = new Curso("Ciências do solo");
+                Curso cursoTemp2 = new Curso("Climatologia");
+                
+                cursoTemp1.adicionarEstudante(tempStudent);
+                cursoTemp2.adicionarEstudante(tempStudent);
+                
+                session.save(cursoTemp1);
+                session.save(cursoTemp2);
+        
+                session.getTransaction().commit();
+            }
+            catch (Exception e) {
+                e.getStackTrace();
+            }
+            finally {
+                session.close();
+                factory.close();
+            }
+    
+        }
+    
+    }
+
+Você pode verificar os resultados:
+
+    SELECT * FROM curso;
+    SELECT * FROM estudante;
+    SELECT * FROM curso_estudante;
+
+# Como usar Spring MVC e Hibernate juntos<span id="springmvchibernate"></span>

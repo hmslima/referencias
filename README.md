@@ -2,9 +2,9 @@
 
 *This is the only paragraph that I am writing in English: this is just a collection of quick references and mini-tutorials of several technologies* ***for my personal needs***. *However, it certainly can help other people.*
 
-Olá, esta é uma coleção de tutoriais e referências que fiz para mim mesmo. Embora este seja um projeto pessoal, tenho certeza que ele poderá ajudar outras pessoas, portanto posso aceitar contribuições se estas se adequarem ao estilo dos materiais.
+Olá, esta é uma coleção de tutoriais e referências que fiz para mim mesmo. Embora este seja um projeto pessoal, tenho certeza que ele poderá ajudar outras pessoas, portanto posso aceitar contribuições se estas se adequarem ao estilo dos materiais. Alguns inclusive são mais "anotações" que fiz de cursos aos quais assisti.
 
-Sei que fazer tutoriais para si próprio parece ser estranho, mas gosto de estudar as coisas fazendo o meu próprio material, vou coletando informações de um lugar e de outro e vou construindo um tutorial que se adéque a minha metodologia de aprendizagem/ensino. Apesar de eu curtir fazer tutoriais, escrevi muitos desses materiais por pura necessidade, porque os livros, vídeos e tutoriais sempre tinham deficiência em algum ponto, o que me forçava a consultar diferentes materiais para entender um único tópico.
+Sei que fazer tutoriais para si próprio parece ser estranho, mas gosto de estudar as coisas fazendo o meu próprio material, vou coletando informações de um lugar e de outro e vou construindo um tutorial que se adéque à minha metodologia de aprendizagem/ensino. Apesar de eu curtir fazer tutoriais, escrevi muitos desses materiais por pura necessidade, porque os livros, vídeos e tutoriais sempre tinham deficiência em algum ponto, o que me forçava a consultar diferentes materiais para entender um único tópico.
 
 Esses materiais que escrevi não só servem para eu aprender algo, mas também para eu reaprender as tecnologias que eu tinha deixado de lado por um tempo, são ótimos para "refrescar a memória".
 
