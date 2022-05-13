@@ -88,6 +88,32 @@
 
 		* [@ManyToMany](#hibernate_mappings_manytomany)
 
+* [Como usar Spring MVC e Hibernate juntos](#springmvchibernate)
+
+	* [Mais configurações](#springmvchibernate_config)
+
+	* [Teste com um Controller](#springmvchibernate_testecontroller)
+
+	* [Início do projeto](#springmvchibernate_inicio)
+
+	* [Floreio: CSS e Página de Boas-Vindas](#springmvchibernate_floreio)
+
+	* [Mapping](#springmvchibernate_mapping)
+
+	* [Salvar cliente](#springmvchibernate_add)
+
+	* [Atualizar cliente](#springmvchibernate_update)
+
+	* [Deletar cliente](#springmvchibernate_delete)
+
+	* [Sistema de busca](#springmvchibernate_search)
+
+	* [Ordenação](#springmvchibernate_order)
+
+	* [BÔNUS: O projeto completo](#springmvchibernate_full)
+
+* [Programação orientada a aspecto](#aop)
+
 
 # Introdução<span id="intro"></span>
 
@@ -1259,6 +1285,8 @@ Talvez você tenha dúvidas de quando usar um ou outro. Vejamos esta tabela que 
 
 
 # Spring MVC<span id="springmvc"></span>
+
+**Dica de ouro:** Antes de continuar, procure estudar o conteito de MVC antes de progredir. Não precisa ir muito a fundo, parar para escrever código e coisas do tipo, só preciso que você entenda bem o padrão de projeto *Model–view–controller*.
 
 Mude a perspectiva do Eclipse para Java EE.
 
@@ -4770,3 +4798,3204 @@ Você pode verificar os resultados:
     SELECT * FROM curso_estudante;
 
 # Como usar Spring MVC e Hibernate juntos<span id="springmvchibernate"></span>
+
+Vamos ajeitar nosso banco de dados, use a conta `estudante` mesmo:
+
+    CREATE DATABASE  IF NOT EXISTS `cliente_web`;
+    USE `cliente_web`;
+    
+    DROP TABLE IF EXISTS `cliente`;
+    CREATE TABLE `cliente` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+    
+    LOCK TABLES `cliente` WRITE;
+    
+    INSERT INTO `cliente` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+    
+    UNLOCK TABLES;
+
+Agora, no Eclipse, vá em `File` => `New` => `Dynamic Web Project`: chamarei meu projeto de `cliente-web`, sugiro que você faça o mesmo para que fiquemos na mesma página.
+
+Baixe o [Java Connector pra MySQL](https://dev.mysql.com/downloads/connector/j/) e ponha o arquivo JAR na pasta `src/main/java/webapp/WEB-INF/lib`.
+
+Na pasta `src/main/java`, crie o pacote `dominio.jdbc`.
+
+Agora criaremos um *servlet* neste pacote básico para testar a conexão. Clique no pacote, `New` => `Servlet`, chamarei o arquivo de `ServletDbTeste`, dê `Next` até você chegar numa janela onde você tem algumas opções para deixar marcadas, deixe apenas marcados Inherited abstract methods` e `doGet`.
+
+    package dominio.jdbc;
+    
+    import java.io.IOException;
+    import java.io.PrintWriter;
+    import java.sql.Connection;
+    import java.sql.DriverManager;
+    
+    import javax.servlet.ServletException;
+    import javax.servlet.annotation.WebServlet;
+    import javax.servlet.http.HttpServlet;
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+    
+    /**
+     * Servlet implementation class ServletDbTeste
+     */
+    @WebServlet("/ServletDbTeste")
+    public class ServletDbTeste extends HttpServlet {
+        private static final long serialVersionUID = 1L;
+    
+        /**
+         * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+         */
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            String usuario = "estudante";
+            String senha = "estudante";
+            String UrlJdbc = "jdbc:mysql://localhost:3306/cliente_web?useSSL=false&serverTimezone=UTC";
+            String driver = "com.mysql.cj.jdbc.Driver";
+            
+            try {
+                PrintWriter out = response.getWriter();
+                Class.forName(driver);
+                out.println("Conectando ao banco de dados: " + UrlJdbc);
+                Connection conn = DriverManager.getConnection(UrlJdbc, usuario, senha);
+                out.println("Conexão realizada com sucesso!");
+                conn.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                throw new ServletException(e);
+            }
+        }
+    
+    }
+    
+`Run as Server`
+
+Espero que tudo tenha ido OK pra você
+
+## Mais configurações<span id="springmvchibernate_config"></span>
+
+Crie os seguintes arquivos na pasta `src/main/java/webapp/WEB-INF/`:
+
+**web.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" id="WebApp_ID" version="4.0">
+      <display-name>spring-mvc</display-name>
+     
+      <absolute-ordering />
+    
+      <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+      </welcome-file-list>
+    
+      <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+          <param-name>contextConfigLocation</param-name>
+          <param-value>/WEB-INF/spring-mvc.xml</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+      </servlet>
+      
+      <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>/</url-pattern>
+      </servlet-mapping>
+    </web-app>
+
+**spring-mvc.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:tx="http://www.springframework.org/schema/tx"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/mvc
+            http://www.springframework.org/schema/mvc/spring-mvc.xsd
+            http://www.springframework.org/schema/tx 
+            http://www.springframework.org/schema/tx/spring-tx.xsd">
+    
+        <!-- Add support for component scanning -->
+        <context:component-scan base-package="dominio.springmvchb" />
+    
+        <!-- Add support for conversion, formatting and validation support -->
+        <mvc:annotation-driven/>
+    
+        <!-- Define Spring MVC view resolver -->
+        <bean
+            class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+            <property name="prefix" value="/WEB-INF/view/" />
+            <property name="suffix" value=".jsp" />
+        </bean>
+    
+        <!-- Step 1: Define Database DataSource / connection pool -->
+        <bean id="myDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+              destroy-method="close">
+            <property name="driverClass" value="com.mysql.cj.jdbc.Driver" />
+            <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/cliente_web?useSSL=false" />
+            <property name="user" value="estudante" />
+            <property name="password" value="estudante" /> 
+    
+            <!-- these are connection pool properties for C3P0 -->
+            <property name="minPoolSize" value="5" />
+            <property name="maxPoolSize" value="20" />
+            <property name="maxIdleTime" value="30000" />
+        </bean>  
+        
+        <!-- Step 2: Setup Hibernate session factory -->
+        <bean id="sessionFactory"
+            class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+            <property name="dataSource" ref="myDataSource" />
+            <property name="packagesToScan" value="dominio.springmvchb.entity" />
+            <property name="hibernateProperties">
+               <props>
+                  <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                  <prop key="hibernate.show_sql">true</prop>
+               </props>
+            </property>
+       </bean>      
+    
+        <!-- Step 3: Setup Hibernate transaction manager -->
+        <bean id="myTransactionManager"
+                class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+            <property name="sessionFactory" ref="sessionFactory"/>
+        </bean>
+        
+        <!-- Step 4: Enable configuration of transactional behavior based on annotations -->
+        <tx:annotation-driven transaction-manager="myTransactionManager" />
+    
+    </beans>
+
+Agora adicione esses 2 arquivos à pasta `WEB-INF/lib`:
+
+* [javax.servlet.jsp.jstl](https://mvnrepository.com/artifact/org.glassfish.web/javax.servlet.jsp.jstl)
+
+* [javax.servlet.jsp.jstl-api](https://mvnrepository.com/artifact/javax.servlet.jsp.jstl/javax.servlet.jsp.jstl-api)
+
+Adicione a última versão dos arquivos JAR do Spring, você sabe [onde](https://repo.spring.io/ui/) baixar.
+
+E por fim, baixe os JARs do [Hibernate/ORM](https://hibernate.org/orm/). Pegue todos os arquivos JAR das pastas `required` e `optional/c3p0`
+
+***OBS.:*** *Para quem usa as versões 9+ do Java, os 4 arquivos JAR abaixo serão necessários também.*
+
+* [javax.activation](https://repo1.maven.org/maven2/com/sun/activation/javax.activation/)
+
+* [jaxb-api](https://repo1.maven.org/maven2/javax/xml/bind/jaxb-api/) *(procure ter este e os dois seguintes na mesma versão. Na época que escrevi isto, usei a versão 2.3.0)*
+
+* [jaxb-core](https://repo1.maven.org/maven2/com/sun/xml/bind/jaxb-core/)
+
+* [jaxb-impl](https://repo1.maven.org/maven2/com/sun/xml/bind/jaxb-impl/)
+
+## Teste com um Controller<span id="springmvchibernate_testecontroller"></span>
+
+Crie o pacote `dominio.springmvchb.controller`, dentro dele crie o arquivo:
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @RequestMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            return "lista";
+        }
+    }
+
+Crie a pasta `view` dentro da pasta `WEB-INF` e dentro de `WEB-INF/view` crie o seguinte arquivo .jsp:
+
+**lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <p>Está tudo funcionando!</p>
+    
+    </body>
+    </html>
+
+Clique com o botão direito do mouse sobre o nome do projeto, `Run As` => `Run on Server`.
+
+Sim, você verá um erro 404, mas é porque ainda não definimos uma rota para `/`, mas sim para `/cliente/lista/`. Portanto, tente acessar o endereço [http://localhost:8080/cliente-web/cliente/lista/](http://localhost:8080/cliente-web/cliente/lista/) *(assumo aqui que você usou os mesmíssimos nomes que eu, caso contrário adapte o endereço para o seu caso)*.
+
+## Início do projeto<span id="springmvchibernate_inicio"></span>
+
+**Dica de ouro:** Sei que eu já tinha te pedido para estudar sobre MVC, mas como não sei que materiais você achou, peço que você estude sobre DAO *(Data Access Object)* agora e como ele se relaciona com MVC. Aproveite e pesquise também como essa combinação MVC-DAO faz uso de *services*.
+
+Já testamos tudo, podemos realmente iniciar o projeto. Mas reaproveitaremos os arquivos criados nos dois subcapítulos anteriores.
+
+Crie o pacote `dominio.springmvchb.entity`, dentro dele crie a classe:
+
+**Cliente.java**
+
+    package dominio.springmvchb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="cliente")
+    public class Cliente {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        public int id;
+        
+        @Column(name="nome")
+        public String nome;
+        
+        @Column(name="sobrenome")
+        public String sobrenome;
+        
+        @Column(name="email")
+        public String email;
+        
+        public Cliente () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Cliente [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+Crie o pacote `dominio.springmvchb.dao`, dentro dele crie a interface:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+    
+        public List<Cliente> getClientes();
+    
+    }
+
+E, no mesmo pacote, a classe:
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import javax.transaction.Transactional;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class); // Neste caso, importaremos de org.hibernate.query.Query (PRESTA ATENÇÃO NO NOME!) em vez de javax.persistence porque como estamos usando uma versão do Hibernate mais nova que a 5.2 e métodos em outros pacotes se tornaram obsoletos
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+    }
+
+A *annotation* `@Transactional` automaticamente inicia e termina uma transação no código Hibernate, de forma que você não precisará mais usar `session.beginTransaction()` ou `session.getTransaction().commit()`.
+
+E agora vamos atualizar o Controller:
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired // Spring escaneará por um componente que implementa a interface ClienteDAO
+        private ClienteDAO clienteDAO;
+        
+        @RequestMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteDAO.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+    }
+
+E também atualizaremos o arquivo JSP:
+
+**lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+                
+                <table>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Sobrenome</th>
+                        <th>Email</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}"> <!-- clientes é o atributo do model... -->
+                            <tr>
+                                <td>${tempCliente.nome}</td> <!-- Por exemplo, aqui ele chama tempCliente.getNome() -->
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+A linha `<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>` adiciona suporte a *tags* JSTL Core.
+
+## Floreio: CSS e Página de Boas-Vindas<span id="springmvchibernate_floreio"></span>
+
+Crie a pasta `resources` dentro da pasta `webapp`. Dentro de `resources`, crie  apasta `css` e dentro desta os dois arquivos abaixo:
+
+**estilo.css**
+
+    html, body{
+        margin-left:15px; margin-right:15px; 
+        padding:0px; 
+        font-family:Verdana, Arial, Helvetica, sans-serif;
+    }
+    
+    table {   
+        border-collapse:collapse;
+        border-bottom:1px solid gray;
+        font-family: Tahoma,Verdana,Segoe,sans-serif;
+        width:72%;
+    }
+     
+    th {
+        border-bottom:1px solid gray;
+        background:none repeat scroll 0 0 #09c332;
+        padding:10px;
+        color: #FFFFFF;
+    }
+    
+    tr {
+        border-top:1px solid gray;
+        text-align:center;    
+    }
+     
+    tr:nth-child(even) {background: #FFFFFF}
+    tr:nth-child(odd) {background: #BBBBBB}    
+     
+    #wrapper {width: 100%; margin-top: 0px; }
+    #header {width: 70%; background: #09c332; margin-top: 0px; padding:15px 0px 15px 15px;}
+    #header h2 {width: 100%; margin:auto; color: #FFFFFF;}
+    #container {width: 100%; margin:auto}
+    #container h3 {color: #000;}
+    #container #content {margin-top: 20px;}
+    
+    .add-button {
+        border: 1px solid #666; 
+        border-radius: 5px; 
+        padding: 4px; 
+        font-size: 12px;
+        font-weight: bold;
+        width: 120px; 
+        padding: 5px 10px; 
+        
+        margin-bottom: 15px;
+        background: #cccccc;
+    }
+
+**adicionar-cliente.css**
+
+    form {
+        margin-top: 10px;
+    }
+    
+    label {
+        font-size: 16px; 
+        width: 100px; 
+        display: block; 
+        text-align: right;
+        margin-right: 10px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    
+    input {
+        width: 250px;
+        border: 1px solid #666; 
+        border-radius: 5px; 
+        padding: 4px; 
+        font-size: 16px;
+    }
+    
+    .save {
+        font-weight: bold;
+        width: 130px; 
+        padding: 5px 10px; 
+        margin-top: 30px;
+        background: #cccccc;
+    }
+    
+    table {   
+        border-style:none;
+        width:50%;
+    }
+    
+    tr:nth-child(even) {background: #FFFFFF}
+    tr:nth-child(odd) {background: #FFFFFF}
+    
+    tr {
+        border-style:none;
+        text-align:left;    
+    }
+
+Edite o arquivo `spring-mvc.xml`:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:tx="http://www.springframework.org/schema/tx"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/mvc
+            http://www.springframework.org/schema/mvc/spring-mvc.xsd
+            http://www.springframework.org/schema/tx 
+            http://www.springframework.org/schema/tx/spring-tx.xsd">
+    
+        <!-- Add support for component scanning -->
+        <context:component-scan base-package="dominio.springmvchb" />
+    
+        <!-- Add support for conversion, formatting and validation support -->
+        <mvc:annotation-driven/>
+    
+        <!-- Define Spring MVC view resolver -->
+        <bean
+            class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+            <property name="prefix" value="/WEB-INF/view/" />
+            <property name="suffix" value=".jsp" />
+        </bean>
+    
+        <!-- Step 1: Define Database DataSource / connection pool -->
+        <bean id="myDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+              destroy-method="close">
+            <property name="driverClass" value="com.mysql.cj.jdbc.Driver" />
+            <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/cliente_web?useSSL=false" />
+            <property name="user" value="estudante" />
+            <property name="password" value="estudante" /> 
+    
+            <!-- these are connection pool properties for C3P0 -->
+            <property name="minPoolSize" value="5" />
+            <property name="maxPoolSize" value="20" />
+            <property name="maxIdleTime" value="30000" />
+        </bean>  
+        
+        <!-- Step 2: Setup Hibernate session factory -->
+        <bean id="sessionFactory"
+            class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+            <property name="dataSource" ref="myDataSource" />
+            <property name="packagesToScan" value="dominio.springmvchb.entity" />
+            <property name="hibernateProperties">
+               <props>
+                  <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                  <prop key="hibernate.show_sql">true</prop>
+               </props>
+            </property>
+       </bean>      
+    
+        <!-- Step 3: Setup Hibernate transaction manager -->
+        <bean id="myTransactionManager"
+                class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+            <property name="sessionFactory" ref="sessionFactory"/>
+        </bean>
+        
+        <!-- Step 4: Enable configuration of transactional behavior based on annotations -->
+        <tx:annotation-driven transaction-manager="myTransactionManager" />
+        
+        <!-- Add support for web resources -->
+        <mvc:resources location="/resources/" mapping="/resources/**"></mvc:resources> <!-- O ** diz que é pra incluir os sub-diretórios -->
+    
+    </beans>
+
+Crie o arquivo abaixo na pasta `webapp` *(isso, em `webapp`, não em `WEB-INF/view`, porque já tem uma configuração prévia em `web.xml`)*.
+
+**index.jsp**
+
+    <% response.sendRedirect("cliente/lista"); %>
+
+## Mapping<span id="springmvchibernate_mapping"></span>
+
+Crie o pacote `dominio.springmvchb.service`, e dentro dele crie a interface `ClienteService` e a classe `ClienteServiceImpl`.
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+    
+        public List<Cliente> getClientes();
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+    }
+
+Atualize o arquivo `ClienteDAOImpl`:
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class); // Neste caso, importaremos de org.hibernate.query.Query (PRESTA ATENÇÃO NO NOME!) em vez de javax.persistence porque como estamos usando uma versão do Hibernate mais nova que a 5.2 e métodos em outros pacotes se tornaram obsoletos
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+    }
+
+`@Transactional` é definido na camada der serviço.
+
+E agora atualize o arquivo `ClienteController`:
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+    }
+
+## Salvar cliente<span id="springmvchibernate_add"></span>
+
+Na pasta `view`, atualize o arquivo `lista.jsp`:
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                <!-- 
+                Se eu quisesse, eu poderia escrever esse botão assim
+                
+                    <form action="mostrarFormParaAdicionar">
+    
+                    <input type="submit" value="Adicionar cliente" class="add-button/>
+    
+                    </form>
+                
+                 -->
+                
+                <table>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Sobrenome</th>
+                        <th>Email</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}"> <!-- clientes é o atributo do model... -->
+                            <tr>
+                                <td>${tempCliente.nome}</td> <!-- Por exemplo, aqui ele chama tempCliente.getNome() -->
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+E crie o arquivo `cliente-form.jsp`:
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/adicionar-cliente.css">
+            <title>Adicionar Cliente</title>
+        </head>
+        <body>
+        
+            <div id="wrapper">
+                <div id="header">
+                    <h1>CRM</h1>
+                </div>
+            </div>
+            
+            <div id="container">
+                <h3>Adicionar Cliente</h3>
+                
+                <form:form action="salvarCliente" modelAttribute="cliente" method="POST">
+                
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><label>Nome: </label></td>
+                                <td><form:input path="nome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>Sobrenome: </label></td>
+                                <td><form:input path="sobrenome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>E-mail: </label></td>
+                                <td><form:input path="email" /></td>
+                            </tr>
+                            <tr>
+                                <td><label></label></td>
+                                <td><input type="submit" value="Salvar" class="save" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                
+                </form:form>
+                
+                <div style="clear; both;">
+                
+                    <p>
+                        <a href="${pageContext.request.contextPath}">Voltar pra lista</a>
+                    </p>
+                
+                </div>
+                
+            </div>
+        
+        </body>
+    </html>
+
+Atualize os seguintes arquivos:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class); // Neste caso, importaremos de org.hibernate.query.Query (PRESTA ATENÇÃO NO NOME!) em vez de javax.persistence porque como estamos usando uma versão do Hibernate mais nova que a 5.2 e métodos em outros pacotes se tornaram obsoletos
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.save(oCliente);
+            
+        }
+    
+    }
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+    }
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+        //<form:form action="salvarCliente" modelAttribute="cliente" method="POST">
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+    }
+
+Se você quiser que os resultados na página `cliente/lista` sejam ordenados em ordem alfabética, você pode ir no arquivo `ClienteDAOImpl` e mudar a linha...
+
+    Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+
+...para:
+
+    Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente order by nome", Cliente.class);
+
+Opa, peraí, estamos tendo problemas com inserção de caracteres acentuados no nosso banco de dados. Por exemplo, se insiro "á", esse caractere é guardado como "Ã¡".
+
+Felizmente a solução é bastante simples, no arquivo `cliente-form.jsp` *(onde faremos a inserção dos dados)*, substitua...
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+
+por:
+
+    <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+        pageEncoding="UTF-8"%>
+
+## Atualizar cliente<span id="springmvchibernate_update"></span>
+
+Atualize *(no pun intended)* os arquivos abaixo:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.saveOrUpdate(oCliente); // Olha essa atualização especial que fizemos aqui
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Cliente oCliente = sessionAtual.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+    }
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+    }
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/mostrarFormParaAtualizar")
+        public String mostrarFormParaAtualizar(@RequestParam("clienteId") int oId, Model modelo) {
+            
+            Cliente oCliente = clienteService.getCliente(oId);
+            
+            modelo.addAttribute("cliente", oCliente);
+            //<form:form action="salvarCliente" modelAttribute="cliente" method="POST">
+            
+            return "cliente-form";
+            
+        }
+        
+    }
+
+**lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                <!-- 
+                Se eu quisesse, eu poderia escrever esse botão assim
+                
+                    <form action="mostrarFormParaAdicionar">
+    
+                    <input type="submit" value="Adicionar cliente" class="add-button/>
+    
+                    </form>
+                
+                 -->
+                
+                <table>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Sobrenome</th>
+                        <th>Email</th>
+                        <th>Ação</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}"> <!-- clientes é o atributo do model... -->
+                        
+                            <c:url var="atualizarLink" value="/cliente/mostrarFormParaAtualizar">
+                                <c:param name="clienteId" value="${tempCliente.id}" /> <!-- Repare que o tempCliente aqui se refere à variável do c:forEach -->
+                            </c:url>
+                            
+                            <tr>
+                                <td>${tempCliente.nome}</td> <!-- Por exemplo, aqui ele chama tempCliente.getNome() -->
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                                <td><a href="${atualizarLink}">Atualizar</a></td> <!-- Repare que o tempCliente aqui se refere à variável do c:url -->
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+**cliente-form.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+        pageEncoding="UTF-8"%>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/adicionar-cliente.css">
+            <title>Adicionar Cliente</title>
+        </head>
+        <body>
+        
+            <div id="wrapper">
+                <div id="header">
+                    <h1>CRM</h1>
+                </div>
+            </div>
+            
+            <div id="container">
+                <h3>Adicionar Cliente</h3>
+                
+                <form:form action="salvarCliente" modelAttribute="cliente" method="POST">
+                
+                        <form:hidden path="id" /> <!-- Sem esta linha, você perde o id do cliente -->
+                
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><label>Nome: </label></td>
+                                <td><form:input path="nome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>Sobrenome: </label></td>
+                                <td><form:input path="sobrenome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>E-mail: </label></td>
+                                <td><form:input path="email" /></td>
+                            </tr>
+                            <tr>
+                                <td><label></label></td>
+                                <td><input type="submit" value="Salvar" class="save" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                
+                </form:form>
+                
+                <div style="clear; both;">
+                
+                    <p>
+                        <a href="${pageContext.request.contextPath}">Voltar pra lista</a>
+                    </p>
+                
+                </div>
+                
+            </div>
+        
+        </body>
+    </html>
+
+## Deletar cliente<span id="springmvchibernate_delete"></span>
+
+Atualize os arquivos abaixo:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.saveOrUpdate(oCliente); // Olha essa atualização especial que fizemos aqui
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Cliente oCliente = sessionAtual.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deletarCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = sessionAtual.createQuery("delete from Cliente where id=:clienteId");
+            
+            oQuery.setParameter("clienteId", oId);
+            
+            oQuery.executeUpdate();
+            
+        }
+    
+    }
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+        @Override
+        @Transactional
+        public void deletarCliente(int oId) {
+            clienteDAO.deletarCliente(oId);  
+            
+        }
+    
+    }
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/mostrarFormParaAtualizar")
+        public String mostrarFormParaAtualizar(@RequestParam("clienteId") int oId, Model modelo) {
+            
+            Cliente oCliente = clienteService.getCliente(oId);
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+            
+        }
+        
+        @GetMapping("/deletar")
+        public String deletarCliente(@RequestParam("clienteId") int oId) {
+        //<c:url var="deletarLink" value="/cliente/deletar">
+            
+            clienteService.deletarCliente(oId);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+    }
+
+**lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                
+                <table>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Sobrenome</th>
+                        <th>Email</th>
+                        <th>Ação</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}">
+                        
+                            <c:url var="atualizarLink" value="/cliente/mostrarFormParaAtualizar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <c:url var="deletarLink" value="/cliente/deletar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <tr>
+                                <td>${tempCliente.nome}</td>
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                                <td><a href="${atualizarLink}">Atualizar</a>
+                                |
+                                <a href="${deletarLink}" onclick="if (!(confirm('Você tem certeza?'))) return false;">Deletar</a></td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+## Sistema de busca<span id="springmvchibernate_search"></span>
+
+Atualize os arquivos abaixo:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.saveOrUpdate(oCliente); // Olha essa atualização especial que fizemos aqui
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Cliente oCliente = sessionAtual.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deletarCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = sessionAtual.createQuery("delete from Cliente where id=:clienteId");
+            
+            oQuery.setParameter("clienteId", oId);
+            
+            oQuery.executeUpdate();
+            
+        }
+    
+        @Override
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = null;
+            
+            if (oNomeProcurado != null && oNomeProcurado.trim().length() > 0) {
+                oQuery = sessionAtual.createQuery("from Cliente where lower(nome) like :oNome or lower(sobrenome) like :oNome", Cliente.class);
+                oQuery.setParameter("oNome", "%" + oNomeProcurado.toLowerCase() + "%"); // % são "wildcard characters"
+            }
+            else {
+                // O query está vazio, portanto pegue todos os clientes
+                oQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            }
+            
+            List<Cliente> clientes = oQuery.getResultList();
+            
+            return clientes;
+        }
+    
+    }
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes();
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+        @Override
+        @Transactional
+        public void deletarCliente(int oId) {
+            clienteDAO.deletarCliente(oId);  
+            
+        }
+    
+        @Override
+        @Transactional
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            // TODO Auto-generated method stub
+            return clienteDAO.buscarClientes(oNomeProcurado);
+        }
+    
+    }
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.getClientes();
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/mostrarFormParaAtualizar")
+        public String mostrarFormParaAtualizar(@RequestParam("clienteId") int oId, Model modelo) {
+            
+            Cliente oCliente = clienteService.getCliente(oId);
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+            
+        }
+        
+        @GetMapping("/deletar")
+        public String deletarCliente(@RequestParam("clienteId") int oId) {
+            
+            clienteService.deletarCliente(oId);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/buscar")
+        public String buscarClientes(@RequestParam("oNomeProcurado") String oNomeProcurado, Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.buscarClientes(oNomeProcurado);
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+            
+        }
+        
+    }
+
+**lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                
+                <form:form action="buscar" method="GET">
+                    Procurar cliente: <input type="text" name="oNomeProcurado" />
+                    
+                    <input type="submit" value="Pesquisar" class="add-button" />
+                </form:form>
+                
+                <table>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Sobrenome</th>
+                        <th>Email</th>
+                        <th>Ação</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}">
+                        
+                            <c:url var="atualizarLink" value="/cliente/mostrarFormParaAtualizar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <c:url var="deletarLink" value="/cliente/deletar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <tr>
+                                <td>${tempCliente.nome}</td>
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                                <td><a href="${atualizarLink}">Atualizar</a>
+                                |
+                                <a href="${deletarLink}" onclick="if (!(confirm('Você tem certeza?'))) return false;">Deletar</a></td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+## Ordenação<span id="springmvchibernate_order"></span>
+
+Esse é o último, prometo. Sei que você já está cansado(a)...
+
+Crie o pacote `dominio.springmvchb.util` e dentro dele crie a interface `OrdenarUtil`.
+
+    package dominio.springmvchb.util;
+    
+    public interface OrdenarUtil {
+    
+        public static final int NOME = 1;
+        public static final int SOBRENOME = 2;
+        public static final int EMAIL = 3;
+    
+    }
+
+Atualize o arquivo `lista.js`:
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <%@ page import="dominio.springmvchb.util.OrdenarUtil" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                
+                <form:form action="buscar" method="GET">
+                    Procurar cliente: <input type="text" name="oNomeProcurado" />
+                    
+                    <input type="submit" value="Pesquisar" class="add-button" />
+                </form:form>
+                
+                <table>
+                
+                    <c:url var="ordenarNome" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.NOME) %>" />
+                    </c:url>                    
+    
+                    <c:url var="ordenarSobreNome" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.SOBRENOME) %>" />
+                    </c:url>                    
+    
+                    <c:url var="ordenarEmail" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.EMAIL) %>" />
+                    </c:url>
+                    
+                    <tr>
+                        <th><a href="${ordenarNome}">Nome</a></th>
+                        <th><a href="${ordenarSobreNome}">Sobrenome</a></th>
+                        <th><a href="${ordenarEmail}">Email</a></th>
+                        <th>Ação</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}">
+                        
+                            <c:url var="atualizarLink" value="/cliente/mostrarFormParaAtualizar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <c:url var="deletarLink" value="/cliente/deletar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <tr>
+                                <td>${tempCliente.nome}</td>
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                                <td><a href="${atualizarLink}">Atualizar</a>
+                                |
+                                <a href="${deletarLink}" onclick="if (!(confirm('Você tem certeza?'))) return false;">Deletar</a></td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+No arquivo `ClienteController`, atualizaremos o método `listaDeClientes()`:
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    import dominio.springmvchb.util.OrdenarUtil;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo, @RequestParam(required=false) String ordem) {
+            
+            List<Cliente> osClientes = null;
+            
+            if (ordem != null) {
+                int ordemDoCampo = Integer.parseInt(ordem);
+                osClientes = clienteService.getClientes(ordemDoCampo);
+            }
+            else {
+                osClientes = clienteService.getClientes(OrdenarUtil.NOME);
+            }
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/mostrarFormParaAtualizar")
+        public String mostrarFormParaAtualizar(@RequestParam("clienteId") int oId, Model modelo) {
+            
+            Cliente oCliente = clienteService.getCliente(oId);
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+            
+        }
+        
+        @GetMapping("/deletar")
+        public String deletarCliente(@RequestParam("clienteId") int oId) {
+            
+            clienteService.deletarCliente(oId);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/buscar")
+        public String buscarClientes(@RequestParam("oNomeProcurado") String oNomeProcurado, Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.buscarClientes(oNomeProcurado);
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+            
+        }
+        
+    }
+
+Agora atualize os serviços:
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes(int ordemDoCampo);
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes(int ordemDoCampo) {
+            return clienteDAO.getClientes(ordemDoCampo);
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+        @Override
+        @Transactional
+        public void deletarCliente(int oId) {
+            clienteDAO.deletarCliente(oId);  
+            
+        }
+    
+        @Override
+        @Transactional
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            // TODO Auto-generated method stub
+            return clienteDAO.buscarClientes(oNomeProcurado);
+        }
+    
+    }
+
+E por fim, atualize o DAO:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes(int ordemDoCampo);
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.util.OrdenarUtil;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes(int ordemDoCampo) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            String oNomeDoCampo = null;
+            
+            switch(ordemDoCampo) {
+                case OrdenarUtil.NOME:
+                    oNomeDoCampo = "nome";
+                    break;
+                case OrdenarUtil.SOBRENOME:
+                    oNomeDoCampo = "sobrenome";
+                    break;
+                case OrdenarUtil.EMAIL:
+                    oNomeDoCampo = "email";
+                    break;
+                default:
+                    oNomeDoCampo = "nome";
+            }
+            
+            String customQuery = "from Cliente order by " + oNomeDoCampo;
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery(customQuery, Cliente.class);
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.saveOrUpdate(oCliente); // Olha essa atualização especial que fizemos aqui
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Cliente oCliente = sessionAtual.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deletarCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = sessionAtual.createQuery("delete from Cliente where id=:clienteId");
+            
+            oQuery.setParameter("clienteId", oId);
+            
+            oQuery.executeUpdate();
+            
+        }
+    
+        @Override
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = null;
+            
+            if (oNomeProcurado != null && oNomeProcurado.trim().length() > 0) {
+                oQuery = sessionAtual.createQuery("from Cliente where lower(nome) like :oNome or lower(sobrenome) like :oNome", Cliente.class);
+                oQuery.setParameter("oNome", "%" + oNomeProcurado.toLowerCase() + "%"); // % são "wildcard characters"
+            }
+            else {
+                // O query está vazio, portanto pegue todos os clientes
+                oQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            }
+            
+            List<Cliente> clientes = oQuery.getResultList();
+            
+            return clientes;
+        }
+    
+    }
+
+## BÔNUS: O projeto completo<span id="springmvchibernate_full"></span>
+
+Como não quero me repetir: se você ainda não tem os arquivos JAR configurados, vá até o início deste capítulo e depois volte aqui.
+
+**/cliente-web/src/main/webapp/index.jsp**
+
+    <% response.sendRedirect("cliente/lista"); %>
+
+**/cliente-web/src/main/webapp/WEB-INF/web.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" id="WebApp_ID" version="4.0">
+      <display-name>spring-mvc</display-name>
+     
+      <absolute-ordering />
+    
+      <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+      </welcome-file-list>
+    
+      <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+          <param-name>contextConfigLocation</param-name>
+          <param-value>/WEB-INF/spring-mvc.xml</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+      </servlet>
+      
+      <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>/</url-pattern>
+      </servlet-mapping>
+    </web-app>
+
+**/cliente-web/src/main/webapp/WEB-INF/spring-mvc.xml**
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:tx="http://www.springframework.org/schema/tx"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/mvc
+            http://www.springframework.org/schema/mvc/spring-mvc.xsd
+            http://www.springframework.org/schema/tx 
+            http://www.springframework.org/schema/tx/spring-tx.xsd">
+    
+        <!-- Add support for component scanning -->
+        <context:component-scan base-package="dominio.springmvchb" />
+    
+        <!-- Add support for conversion, formatting and validation support -->
+        <mvc:annotation-driven/>
+    
+        <!-- Define Spring MVC view resolver -->
+        <bean
+            class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+            <property name="prefix" value="/WEB-INF/view/" />
+            <property name="suffix" value=".jsp" />
+        </bean>
+    
+        <!-- Step 1: Define Database DataSource / connection pool -->
+        <bean id="myDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+              destroy-method="close">
+            <property name="driverClass" value="com.mysql.cj.jdbc.Driver" />
+            <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/cliente_web?useSSL=false" />
+            <property name="user" value="estudante" />
+            <property name="password" value="estudante" /> 
+    
+            <!-- these are connection pool properties for C3P0 -->
+            <property name="minPoolSize" value="5" />
+            <property name="maxPoolSize" value="20" />
+            <property name="maxIdleTime" value="30000" />
+        </bean>  
+        
+        <!-- Step 2: Setup Hibernate session factory -->
+        <bean id="sessionFactory"
+            class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+            <property name="dataSource" ref="myDataSource" />
+            <property name="packagesToScan" value="dominio.springmvchb.entity" />
+            <property name="hibernateProperties">
+               <props>
+                  <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                  <prop key="hibernate.show_sql">true</prop>
+               </props>
+            </property>
+       </bean>      
+    
+        <!-- Step 3: Setup Hibernate transaction manager -->
+        <bean id="myTransactionManager"
+                class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+            <property name="sessionFactory" ref="sessionFactory"/>
+        </bean>
+        
+        <!-- Step 4: Enable configuration of transactional behavior based on annotations -->
+        <tx:annotation-driven transaction-manager="myTransactionManager" />
+        
+        <!-- Add support for web resources -->
+        <mvc:resources location="/resources/" mapping="/resources/**"></mvc:resources> <!-- O ** diz que é pra incluir os sub-diretórios -->
+    
+    </beans>
+
+Na pasta `/cliente-web/src/main/webapp/WEB-INF/`, crie a pasta `view`.
+
+**/cliente-web/src/main/webapp/WEB-INF/view/lista.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+    <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <%@ page import="dominio.springmvchb.util.OrdenarUtil" %>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+        <title>Spring MVC + Hibernate</title>
+    </head>
+    <body>
+    
+        <div id="wrapper">
+            <div id="header">
+                <h1>CRM</h1>
+            </div>
+        </div>
+        
+        <div id="container">
+            <div id="content">
+            
+                <input type="button" value="Adicionar cliente" 
+                       onclick="window.location.href='mostrarFormParaAdicionar'; return false;"
+                       class="add-button"
+                />
+                
+                <form:form action="buscar" method="GET">
+                    Procurar cliente: <input type="text" name="oNomeProcurado" />
+                    
+                    <input type="submit" value="Pesquisar" class="add-button" />
+                </form:form>
+                
+                <table>
+                
+                    <c:url var="ordenarNome" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.NOME) %>" />
+                    </c:url>                    
+    
+                    <c:url var="ordenarSobreNome" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.SOBRENOME) %>" />
+                    </c:url>                    
+    
+                    <c:url var="ordenarEmail" value="/cliente/lista">
+                        <c:param name="ordem" value="<%= Integer.toString(OrdenarUtil.EMAIL) %>" />
+                    </c:url>
+                    
+                    <tr>
+                        <th><a href="${ordenarNome}">Nome</a></th>
+                        <th><a href="${ordenarSobreNome}">Sobrenome</a></th>
+                        <th><a href="${ordenarEmail}">Email</a></th>
+                        <th>Ação</th>
+                        
+                        <c:forEach var="tempCliente" items="${clientes}">
+                        
+                            <c:url var="atualizarLink" value="/cliente/mostrarFormParaAtualizar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <c:url var="deletarLink" value="/cliente/deletar">
+                                <c:param name="clienteId" value="${tempCliente.id}" />
+                            </c:url>
+                            
+                            <tr>
+                                <td>${tempCliente.nome}</td>
+                                <td>${tempCliente.sobrenome}</td>
+                                <td>${tempCliente.email}</td>
+                                <td><a href="${atualizarLink}">Atualizar</a>
+                                |
+                                <a href="${deletarLink}" onclick="if (!(confirm('Você tem certeza?'))) return false;">Deletar</a></td>
+                            </tr>
+                        </c:forEach>
+                        
+                    </tr>
+                </table>
+                
+            </div>
+        </div>
+    
+    </body>
+    </html>
+
+**/cliente-web/src/main/webapp/WEB-INF/view/cliente-form.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+        pageEncoding="UTF-8"%>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/estilo.css">
+            <link rel="stylesheet" href="${pageContext.request.contextPath}/resources/css/adicionar-cliente.css">
+            <title>Adicionar Cliente</title>
+        </head>
+        <body>
+        
+            <div id="wrapper">
+                <div id="header">
+                    <h1>CRM</h1>
+                </div>
+            </div>
+            
+            <div id="container">
+                <h3>Adicionar Cliente</h3>
+                
+                <form:form action="salvarCliente" modelAttribute="cliente" method="POST">
+                
+                        <form:hidden path="id" /> <!-- Sem esta linha, você perde o id do cliente -->
+                
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><label>Nome: </label></td>
+                                <td><form:input path="nome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>Sobrenome: </label></td>
+                                <td><form:input path="sobrenome" /></td>
+                            </tr>
+                            <tr>
+                                <td><label>E-mail: </label></td>
+                                <td><form:input path="email" /></td>
+                            </tr>
+                            <tr>
+                                <td><label></label></td>
+                                <td><input type="submit" value="Salvar" class="save" /></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                
+                </form:form>
+                
+                <div style="clear; both;">
+                
+                    <p>
+                        <a href="${pageContext.request.contextPath}">Voltar pra lista</a>
+                    </p>
+                
+                </div>
+                
+            </div>
+        
+        </body>
+    </html>
+
+Na pasta `/cliente-web/src/main/webapp/`, crie a pasta `resources`, e dentro desta a pasta `css`.
+
+**/cliente-web/src/main/webapp/resources/css/estilo.css**
+
+    html, body{
+        margin-left:15px; margin-right:15px; 
+        padding:0px; 
+        font-family:Verdana, Arial, Helvetica, sans-serif;
+    }
+    
+    table {   
+        border-collapse:collapse;
+        border-bottom:1px solid gray;
+        font-family: Tahoma,Verdana,Segoe,sans-serif;
+        width:72%;
+    }
+     
+    th {
+        border-bottom:1px solid gray;
+        background:none repeat scroll 0 0 #09c332;
+        padding:10px;
+        color: #FFFFFF;
+    }
+    
+    tr {
+        border-top:1px solid gray;
+        text-align:center;    
+    }
+     
+    tr:nth-child(even) {background: #FFFFFF}
+    tr:nth-child(odd) {background: #BBBBBB}    
+     
+    #wrapper {width: 100%; margin-top: 0px; }
+    #header {width: 70%; background: #09c332; margin-top: 0px; padding:15px 0px 15px 15px;}
+    #header h2 {width: 100%; margin:auto; color: #FFFFFF;}
+    #container {width: 100%; margin:auto}
+    #container h3 {color: #000;}
+    #container #content {margin-top: 20px;}
+    
+    .add-button {
+        border: 1px solid #666; 
+        border-radius: 5px; 
+        padding: 4px; 
+        font-size: 12px;
+        font-weight: bold;
+        width: 120px; 
+        padding: 5px 10px; 
+        
+        margin-bottom: 15px;
+        background: #cccccc;
+    }
+
+**/cliente-web/src/main/webapp/resources/css/adicionar-cliente.css**
+
+    form {
+        margin-top: 10px;
+    }
+    
+    label {
+        font-size: 16px; 
+        width: 100px; 
+        display: block; 
+        text-align: right;
+        margin-right: 10px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    
+    input {
+        width: 250px;
+        border: 1px solid #666; 
+        border-radius: 5px; 
+        padding: 4px; 
+        font-size: 16px;
+    }
+    
+    .save {
+        font-weight: bold;
+        width: 130px; 
+        padding: 5px 10px; 
+        margin-top: 30px;
+        background: #cccccc;
+    }
+    
+    table {   
+        border-style:none;
+        width:50%;
+    }
+    
+    tr:nth-child(even) {background: #FFFFFF}
+    tr:nth-child(odd) {background: #FFFFFF}
+    
+    tr {
+        border-style:none;
+        text-align:left;    
+    }
+
+Agora crie os seguintes pacotes:
+
+* `dominio.springmvchb.controller`
+
+* `dominio.springmvchb.dao`
+
+* `dominio.springmvchb.entity`
+
+* `dominio.springmvchb.service`
+
+* `dominio.springmvchb.util`
+
+Já podemos criar as seguintes interfaces e classes:
+
+**Cliente.java**
+
+    package dominio.springmvchb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="cliente")
+    public class Cliente {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        public int id;
+        
+        @Column(name="nome")
+        public String nome;
+        
+        @Column(name="sobrenome")
+        public String sobrenome;
+        
+        @Column(name="email")
+        public String email;
+        
+        public Cliente () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Cliente [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+**ClienteController.java**
+
+    package dominio.springmvchb.controller;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.ModelAttribute;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RequestParam;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    import dominio.springmvchb.util.OrdenarUtil;
+    
+    @Controller
+    @RequestMapping("/cliente")
+    public class ClienteController {
+    
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/lista")
+        public String listaDeClientes(Model modelo, @RequestParam(required=false) String ordem) {
+            
+            List<Cliente> osClientes = null;
+            
+            if (ordem != null) {
+                int ordemDoCampo = Integer.parseInt(ordem);
+                osClientes = clienteService.getClientes(ordemDoCampo);
+            }
+            else {
+                osClientes = clienteService.getClientes(OrdenarUtil.NOME);
+            }
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+        }
+        
+        @GetMapping("/mostrarFormParaAdicionar")
+        public String mostrarFormParaAdicionar(Model modelo) {
+            
+            Cliente oCliente = new Cliente();
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+        }
+        
+        @PostMapping("/salvarCliente")
+        public String salvarCliente(@ModelAttribute("cliente") Cliente oCliente) {
+            
+            clienteService.salvarCliente(oCliente);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/mostrarFormParaAtualizar")
+        public String mostrarFormParaAtualizar(@RequestParam("clienteId") int oId, Model modelo) {
+            
+            Cliente oCliente = clienteService.getCliente(oId);
+            
+            modelo.addAttribute("cliente", oCliente);
+            
+            return "cliente-form";
+            
+        }
+        
+        @GetMapping("/deletar")
+        public String deletarCliente(@RequestParam("clienteId") int oId) {
+            
+            clienteService.deletarCliente(oId);
+            
+            return "redirect:/cliente/lista";
+            
+        }
+        
+        @GetMapping("/buscar")
+        public String buscarClientes(@RequestParam("oNomeProcurado") String oNomeProcurado, Model modelo) {
+            
+            List<Cliente> osClientes = clienteService.buscarClientes(oNomeProcurado);
+            
+            modelo.addAttribute("clientes", osClientes);
+            
+            return "lista";
+            
+        }
+        
+    }
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes(int ordemDoCampo);
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.util.OrdenarUtil;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+    
+        @Override
+        public List<Cliente> getClientes(int ordemDoCampo) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            String oNomeDoCampo = null;
+            
+            switch(ordemDoCampo) {
+                case OrdenarUtil.NOME:
+                    oNomeDoCampo = "nome";
+                    break;
+                case OrdenarUtil.SOBRENOME:
+                    oNomeDoCampo = "sobrenome";
+                    break;
+                case OrdenarUtil.EMAIL:
+                    oNomeDoCampo = "email";
+                    break;
+                default:
+                    oNomeDoCampo = "nome";
+            }
+            
+            String customQuery = "from Cliente order by " + oNomeDoCampo;
+            
+            System.out.println(customQuery); // DELETEEEEEEEEE
+            
+            Query<Cliente> aQuery = sessionAtual.createQuery(customQuery, Cliente.class);
+            
+            List<Cliente> clientes = aQuery.getResultList();
+            
+            return clientes;
+        }
+    
+        @Override
+        public void salvarCliente(Cliente oCliente) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            sessionAtual.saveOrUpdate(oCliente); // Olha essa atualização especial que fizemos aqui
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Cliente oCliente = sessionAtual.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deletarCliente(int oId) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = sessionAtual.createQuery("delete from Cliente where id=:clienteId");
+            
+            oQuery.setParameter("clienteId", oId);
+            
+            oQuery.executeUpdate();
+            
+        }
+    
+        @Override
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            
+            Session sessionAtual = sessionFactory.getCurrentSession();
+            
+            Query oQuery = null;
+            
+            if (oNomeProcurado != null && oNomeProcurado.trim().length() > 0) {
+                oQuery = sessionAtual.createQuery("from Cliente where lower(nome) like :oNome or lower(sobrenome) like :oNome", Cliente.class);
+                oQuery.setParameter("oNome", "%" + oNomeProcurado.toLowerCase() + "%"); // % são "wildcard characters"
+            }
+            else {
+                // O query está vazio, portanto pegue todos os clientes
+                oQuery = sessionAtual.createQuery("from Cliente", Cliente.class);
+            }
+            
+            List<Cliente> clientes = oQuery.getResultList();
+            
+            return clientes;
+        }
+    
+    }
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes(int ordemDoCampo);
+        
+        public void salvarCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deletarCliente(int oId);
+    
+        public List<Cliente> buscarClientes(String oNomeProcurado);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes(int ordemDoCampo) {
+            return clienteDAO.getClientes(ordemDoCampo);
+        }
+    
+        @Override
+        @Transactional
+        public void salvarCliente(Cliente oCliente) {
+            clienteDAO.salvarCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+        @Override
+        @Transactional
+        public void deletarCliente(int oId) {
+            clienteDAO.deletarCliente(oId);  
+            
+        }
+    
+        @Override
+        @Transactional
+        public List<Cliente> buscarClientes(String oNomeProcurado) {
+            // TODO Auto-generated method stub
+            return clienteDAO.buscarClientes(oNomeProcurado);
+        }
+    
+    }
+
+**OrdenarUtil.java**
+
+    package dominio.springmvchb.util;
+    
+    public interface OrdenarUtil {
+    
+        public static final int NOME = 1;
+        public static final int SOBRENOME = 2;
+        public static final int EMAIL = 3;
+    
+    }
+
+# Programação orientada a aspecto<span id="aop"></span>
+
+Programação orientada a aspecto *(ou “Aspect-oriented programming” (AOP), em inglês)*

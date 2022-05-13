@@ -216,7 +216,7 @@ Terei que me adiantar aqui. Mais a frente, você usará as anotações `@Entity`
     	requires hibernate.jpa;
     }
 
-Você também precisará criar um arquivo chamado `hibernate,cfg.xml`, pode ser dentro da pasta `src` mesmo. Para auxiliar na criação desse arquivo, recomendo que você baixe a extensão JBoss para o Eclipse, ela habilitará a IDE criar novos tipos de arquivos, um deles o `hibernate,cfg.xml`. Veja como ficou o meu:
+Você também precisará criar um arquivo chamado `hibernate.cfg.xml`, pode ser dentro da pasta `src` mesmo. Para auxiliar na criação desse arquivo, recomendo que você baixe a extensão JBoss para o Eclipse, ela habilitará a IDE criar novos tipos de arquivos, um deles o `hibernate.cfg.xml`. Veja como ficou o meu:
 
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE hibernate-configuration PUBLIC
