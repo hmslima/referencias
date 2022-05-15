@@ -114,6 +114,27 @@
 
 * [Programação orientada a aspecto](#aop)
 
+	* [Expressões Pointcut](#aop_pointcutexpressions)
+
+	* [Declarações Pointcut](#aop_pointcutdeclarations)
+
+	* [Aspects de ordenação](#aop_orderingaspects)
+
+	* [JoinPoints](#aop_joinpoints)
+
+	* [@AfterReturning](#aop_afterreturning)
+
+	* [@AfterThrowing](#aop_afterthrowing)
+
+	* [@After](#aop_after)
+
+	* [@Around](#aop_around)
+
+	* [AOP no Spring MVC](#aop_springmvc)
+
+		* [Arquivo XML](#aop_springmvc_configxml)
+
+		* [Aspect](#aop_springmvc_aspect)
 
 # Introdução<span id="intro"></span>
 
@@ -7996,6 +8017,1544 @@ Já podemos criar as seguintes interfaces e classes:
     
     }
 
+Se você quiser saber como adicionar suporte a "Programação orientada a aspecto" (AOP) neste projeto, vá para [este subcapítulo](#aop_springmvc).
+
 # Programação orientada a aspecto<span id="aop"></span>
 
 Programação orientada a aspecto *(ou “Aspect-oriented programming” (AOP), em inglês)*
+
+Para aplicar o AOP, você pode usar o Spring AOP ou o AspectJ, cada um tem suas vantagens e desvantagens, só que mesmo que você use o Spring AOP, você ainda precisará baixar os arquivos JAR do AspectJ porque o Spring AOP usa algumas *annotations* e classes do AspectJ.
+
+Ah, a propósito, desta vez configuraremos nosso projeto usando apenas código Java, nada de XML. 🙂
+
+Baixe os JARs do Spring que você já sabe onde achar.
+ 
+Baixe os JARs do AspectJ, aqui o [link](https://mvnrepository.com/artifact/org.aspectj/aspectjweaver).
+
+Dê o nome que você quiser ao projeto (*Java Project* normal mesmo), chamarei o meu de `spring-aop`. Na pasta `src`, crie os pacotes `dominio.aop` e `dominio.aop.dao`. Em `dominio.aop.dao`, crie a classe `ContaDAO`:
+
+    package dominio.aop.dao;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component // Eu poderia ter colocado @Repository aqui, mas como não mexeremos com nenhum banco de dados, @Component é o suficiente
+    public class ContaDAO {
+    
+        public void adicionarConta() {
+            System.out.println(getClass() + "realizando o trabalho de Banco de Dados. Adicionando conta");
+        }
+    
+    }
+
+ Em `dominio.aop`, crie:
+
+**MeuProjetoConfig.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.ComponentScan;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.EnableAspectJAutoProxy;
+    
+    @Configuration
+    @EnableAspectJAutoProxy // Assim Spring AOP pode usar Proxy Support
+    @ComponentScan("dominio.aop")
+    public class MeuProjetoConfig {
+    
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            
+            aContaDAO.adicionarConta();
+            
+            context.close();
+    
+        }
+    
+    }
+
+Crie o pacote `dominio.aop.aspect` e dentro dele crie:
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component // Pra ser descoberto pelo @ComponentScan
+    public class MeuLoggingAspect {
+        
+        @Before("execution(public void adicionarConta())") // Rode este código ANTES da execução do método adicionarConta(), esta é uma Pointcut expression
+        public void beforeAdicionarConta() { // Este método poderia ter qualquer nome
+            
+            System.out.println("\n>> Executando método @Before adicionarConta()");
+        }
+    
+    }
+
+Vamos conhecer logo de antemão cada uma das *annotations*:
+
+| Annotation      | Descrição                                                 |
+| --------------- | --------------------------------------------------------- |
+| @Before         | Roda antes do método                                      |
+| @After *(finally)* | Roda depois do método, indendentemente de sucesso ou erro |
+| @AfterReturning | Roda depois do método retornar um resultado *(ou seja, uma execução feita com sucesso)*, que é interceptado |
+| @AfterThrowing  | Roda depois do método se uma exceção for lançada, ou seja, somente se houver um erro |
+| @Around         | Roda em volta da execução do método, ou seja, roda antes e depois do método, é praticamente uma combinação de `@Before` e `@After` |
+
+## Expressões Pointcut<span id="aop_pointcutexpressions"></span>
+
+Em `@Before("execution(public void adicionarConta())")`, aponto para o método `adicionarConta()` de **qualquer** classe, se eu quisesse ser mais específico essa linha seria `@Before("execution(public void dominio.aop.dao.ContaDAO.adicionarConta())")`.
+
+Também posso usar "coringas", por exemplo, `@Before("execution(public void adicionar*())")` será usado para qualquer método que comece com `public void adicionar`. Se eu quiser pra qualquer tipo, eu poderia colocar `@Before("execution(public * adicionar*())")`, até mesmo o modificador poder ser qualquer um por meio de `@Before("execution(* adicionar*())")`.
+
+O mesmo é aplicado a argumentos:
+
+* `()`: Corresponde a métodos com nenhum argumento, foi o que estávamos usando
+
+* `(*)`: Corresponde a métodos com um argumento de qualquer tipo
+
+* `(..)`: Corresponde a métodos com 0 ou mais argumentos de qualquer tipo
+
+## Declarações Pointcut<span id="aop_pointcutdeclarations"></span>
+
+E se quisermos reutilizar uma expressão pointcut para aplicar a múltiplos *advices*?
+
+Eu poderia copiar e colar:
+
+    [...]
+    
+    @Before("execution(* dominio.aop.dao.*.*(..))")
+    public void beforeAdicionarConta() {
+        [...]
+    }
+    
+    @Before("execution(* dominio.aop.dao.*.*(..))")
+    public void fazerAnalise() {
+        [...]
+    }
+    
+    [...]
+
+Não é a forma ideal, o certo é criar uma única expressão pointcut e utilizá-la pra diferentes *advices*.
+
+    [...]
+    
+    @Pointcut("execution(* dominio.aop.dao.*.*(..))")
+    private void paraOPacoteDao() {}
+    
+    @Before("paraOPacoteDao()")
+    public void beforeAdicionarConta() {
+        [...]
+    }
+    
+    @Before("paraOPacoteDao()")
+    public void fazerAnalise() {
+        [...]
+    }
+    
+    [...]
+
+OK, no pacote `dominio.aop.dao`, crie o arquivo `FiliacaoDAO.java`:
+
+    package dominio.aop.dao;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component
+    public class FiliacaoDAO {
+        
+        public void adicionarMembro() {
+            System.out.println(getClass() + "adicionarMembro()");
+        }
+        
+        public void listarMembros() {
+            System.out.println(getClass() + "listarMembros()");
+        }
+    
+    }
+
+E atualize os seguintes arquivos:
+
+**ContaDAO.java**
+
+    package dominio.aop.dao;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component
+    public class ContaDAO {
+    
+        public void adicionarConta() {
+            System.out.println(getClass() + "realizando o trabalho de Banco de Dados. Adicionando conta");
+        }
+        
+        public void facaUmTrabalho() {
+            System.out.println(getClass() + "facaUmTrabalho()");
+        }
+    
+    }
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.annotation.Pointcut;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    public class MeuLoggingAspect {
+        
+        @Pointcut("execution(* dominio.aop.dao.*.*(..))")
+        private void paraOPacoteDao() {} // Sim, a sintaxe é essa mesmo
+        
+        @Before("paraOPacoteDao()")
+        public void beforeAdicionarConta() {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+        }
+        
+        @Before("paraOPacoteDao()")
+        public void fazerAnalise() {
+            
+            System.out.println("\n>> Realizando análise");
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    import dominio.aop.dao.FiliacaoDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            FiliacaoDAO aFiliacaoDAO = context.getBean("filiacaoDAO", FiliacaoDAO.class);
+            
+            aContaDAO.adicionarConta();
+            aContaDAO.facaUmTrabalho();
+            
+            aFiliacaoDAO.adicionarMembro();
+            aFiliacaoDAO.listarMembros();
+            
+            context.close();
+    
+        }
+    
+    }
+
+Agora aprenderemos como aplicar múltiplas expressões *poincut* para um único *advice*. No nosso exemplos, aplicaremos os advices em tudo, exceto nos *getters* e *setters*. Atualize os arquivos abaixo:
+
+**ContaDAO.java**
+
+    package dominio.aop.dao;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component
+    public class ContaDAO {
+        
+        private String nome;
+        private String codigo;
+    
+        public void adicionarConta() {
+            System.out.println(getClass() + " em adicionarConta()");
+        }
+        
+        public void facaUmTrabalho() {
+            System.out.println(getClass() + " em facaUmTrabalho()");
+        }
+    
+        public String getNome() {
+            System.out.println(getClass() + " em getNome()");
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            System.out.println(getClass() + " em setNome()");
+            this.nome = nome;
+        }
+    
+        public String getCodigo() {
+            System.out.println(getClass() + " em getCodigo()");
+            return codigo;
+        }
+    
+        public void setCodigo(String codigo) {
+            System.out.println(getClass() + " em setCodigo()");
+            this.codigo = codigo;
+        }
+        
+    }
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.annotation.Pointcut;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    public class MeuLoggingAspect {
+        
+        @Pointcut("execution(* dominio.aop.dao.*.*(..))")
+        private void paraOPacoteDao() {}
+        
+        // Cria pointcut para métodos get
+        @Pointcut("execution(* dominio.aop.dao.*.get*(..))")
+        private void getter() {} // De novo, você pode usar o nome que quiser
+        
+        // Cria pointcut para métodos set
+        @Pointcut("execution(* dominio.aop.dao.*.set*(..))")
+        private void setter() {} // De novo, você pode usar o nome que quiser
+        
+        // Inclui paraOPacoteDao() mas esclui os getters e setters
+        @Pointcut("paraOPacoteDao() && !(getter() || setter())")
+        private void paraOPacoteDaoSemGettersESettes() {}
+        
+        @Before("paraOPacoteDaoSemGettersESettes()")
+        public void beforeAdicionarConta() {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+        }
+        
+        @Before("paraOPacoteDaoSemGettersESettes()")
+        public void fazerAnalise() {
+            
+            System.out.println(">> Realizando análise");
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    import dominio.aop.dao.FiliacaoDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            FiliacaoDAO aFiliacaoDAO = context.getBean("filiacaoDAO", FiliacaoDAO.class);
+            
+            aContaDAO.adicionarConta();
+            aContaDAO.facaUmTrabalho();
+            
+            System.out.println("-----------");
+            
+            aContaDAO.setNome("Conta Corrente");
+            aContaDAO.setCodigo("88888");
+            
+            System.out.println("-----------");
+            
+            
+            System.out.println(aContaDAO.getNome());
+            System.out.println(aContaDAO.getCodigo());
+            
+            System.out.println("-----------");
+            
+            aFiliacaoDAO.adicionarMembro();
+            aFiliacaoDAO.listarMembros();
+            
+            context.close();
+    
+        }
+    
+    }
+
+## Aspects de ordenação<span id="aop_orderingaspects"></span>
+
+Como controlar a ordem nas quais os *advices* são aplicados. Para fazer isso, teremos que pôr os *advices* em diferentes *aspects*, ou seja, teremos que refatorar nosso código.
+
+Mexeremos apenas nos arquivos do pacote `dominio.aop.aspect`, editaremos qu que existe e criaremos outros novos:
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()") // Como estão em arquivos separados, preciso fornecer o "fully qualified name"
+        public void beforeAdicionarConta() {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+        }
+    
+    }
+
+**MinhaAnaliseDeApiAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    @Order(2)
+    public class MinhaAnaliseDeApiAspect {
+    
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void fazerAnalise() {
+            
+            System.out.println(">> Realizando análise");
+        }
+        
+    }
+
+**MinhaLogNuvemAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    @Order(3)
+    public class MinhaLogNuvemAspect {
+        
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void logarNaNuvem() {
+            
+            System.out.println(">> logando na núvem");
+        }
+    
+    }
+
+**ExpressoesAop.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Pointcut;
+    
+    @Aspect
+    public class ExpressoesAop {
+    
+        @Pointcut("execution(* dominio.aop.dao.*.*(..))")
+        public void paraOPacoteDao() {}
+        
+        @Pointcut("execution(* dominio.aop.dao.*.get*(..))")
+        public void getter() {}
+        
+        @Pointcut("execution(* dominio.aop.dao.*.set*(..))")
+        public void setter() {}
+        
+        @Pointcut("paraOPacoteDao() && !(getter() || setter())")
+        public void paraOPacoteDaoSemGettersESetters() {}
+        
+    }
+
+Sobre as *annotations* `@Order()`, você pode colocar quaisquer números, não precisa ser uma sequência certinha e os números podem ser negativos, eu poderia ter assim: `@Order(-237)`, `@Order(0)` e `@Order(8)`.
+
+## JoinPoints<span id="aop_joinpoints"></span>
+
+Quando estamos em um *aspect*, como podemos acessar os parâmetros dos métodos. Pra isso usamos o `JoinPoint` que contém os metadados sobre a chamada do método.
+
+No pacote `dominio.aop`, crie o arquivo `Conta.java`:
+
+    package dominio.aop;
+    
+    public class Conta {
+    
+        private String nome;
+        private String nivel;
+        
+        public String getNome() {
+            return nome;
+        }
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+        public String getNivel() {
+            return nivel;
+        }
+        public void setNivel(String nivel) {
+            this.nivel = nivel;
+        }
+    }
+
+Atualize os arquivos abaixo:
+
+**ContaDAO.java**
+
+    package dominio.aop.dao;
+    
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Component
+    public class ContaDAO {
+        
+        private String nome;
+        private String codigo;
+    
+        public void adicionarConta(Conta aConta, boolean vip) {
+            System.out.println(getClass() + " em adicionarConta()");
+        }
+        
+        public void facaUmTrabalho() {
+            System.out.println(getClass() + " em facaUmTrabalho()");
+        }
+    
+        public String getNome() {
+            System.out.println(getClass() + " em getNome()");
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            System.out.println(getClass() + " em setNome()");
+            this.nome = nome;
+        }
+    
+        public String getCodigo() {
+            System.out.println(getClass() + " em getCodigo()");
+            return codigo;
+        }
+    
+        public void setCodigo(String codigo) {
+            System.out.println(getClass() + " em setCodigo()");
+            this.codigo = codigo;
+        }
+        
+    }
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.reflect.MethodSignature;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void beforeAdicionarConta(JoinPoint oJoinPoint) {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+            
+            // Mostra o método de assinatura
+            MethodSignature methodSig = (MethodSignature) oJoinPoint.getSignature();
+            System.out.println("Método: " + methodSig);
+            
+            // Mostra os argumentos do método
+            Object[] args = oJoinPoint.getArgs();
+            
+            for (Object argTemp : args) {
+                
+                System.out.println("Argumento: " + argTemp);
+                
+                if (argTemp instanceof Conta) {
+                    // Faz downcast e printa apenas coisas da casse Conta
+                    Conta aConta = (Conta) argTemp;
+                    
+                    System.out.println("Nome da conta: " + aConta.getNome());
+                    System.out.println("Nível da conta: " + aConta.getNivel());                
+                }            
+            }
+        }
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    import dominio.aop.dao.FiliacaoDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            FiliacaoDAO aFiliacaoDAO = context.getBean("filiacaoDAO", FiliacaoDAO.class);
+            
+            System.out.println("-----------");
+            
+            Conta minhaConta = new Conta();
+            minhaConta.setNome("Luiza");
+            minhaConta.setNivel("Bronze");
+            
+            System.out.println("-----------");
+            
+            aContaDAO.adicionarConta(minhaConta, true);
+            aContaDAO.facaUmTrabalho();
+            
+            System.out.println("-----------");
+            
+            aContaDAO.setNome("foobar");
+            aContaDAO.setCodigo("888888");
+            
+            System.out.println("-----------");
+            
+            aFiliacaoDAO.adicionarMembro();
+            aFiliacaoDAO.listarMembros();
+            
+            context.close();
+    
+        }
+    
+    }
+
+## @AfterReturning<span id="aop_afterreturning"></span>
+
+Não explicarei sobre esse porque você já sabe o seu conceito, então vamos ver quais arquivos atualizar:
+
+**Conta.java**
+
+    package dominio.aop;
+    
+    public class Conta {
+    
+        private String nome;
+        private String nivel;
+        
+        public Conta() {
+            
+        }
+        
+        public Conta(String nome, String nivel) {
+            this.nome = nome;
+            this.nivel = nivel;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+        public String getNivel() {
+            return nivel;
+        }
+        public void setNivel(String nivel) {
+            this.nivel = nivel;
+        }
+    
+        @Override
+        public String toString() {
+            return "Conta [nome=" + nome + ", nivel=" + nivel + "]";
+        }
+    }
+
+**ContaDAO.java**
+
+    package dominio.aop.dao;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Component
+    public class ContaDAO {
+        
+        private String nome;
+        private String codigo;
+        
+        public List<Conta> encontrarContas() {
+            List<Conta> minhasContas = new ArrayList<>();
+            
+            Conta contaTemp1 = new Conta("Thiago", "Prata");
+            Conta contaTemp2 = new Conta("Carla", "Ouro");
+            Conta contaTemp3 = new Conta("Maria", "Bronze");
+            
+            minhasContas.add(contaTemp1);
+            minhasContas.add(contaTemp2);
+            minhasContas.add(contaTemp3);
+            
+            return minhasContas;
+        }
+    
+        public void adicionarConta(Conta aConta, boolean vip) {
+            System.out.println(getClass() + " em adicionarConta()");
+        }
+        
+        public void facaUmTrabalho() {
+            System.out.println(getClass() + " em facaUmTrabalho()");
+        }
+    
+        public String getNome() {
+            System.out.println(getClass() + " em getNome()");
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            System.out.println(getClass() + " em setNome()");
+            this.nome = nome;
+        }
+    
+        public String getCodigo() {
+            System.out.println(getClass() + " em getCodigo()");
+            return codigo;
+        }
+    
+        public void setCodigo(String codigo) {
+            System.out.println(getClass() + " em setCodigo()");
+            this.codigo = codigo;
+        }
+        
+    }
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import java.util.List;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.annotation.AfterReturning;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.reflect.MethodSignature;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @AfterReturning(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                returning="resultado")
+        public void afterReturningEncontrarContasAdvice (JoinPoint oJoinPoint, List<Conta> resultado) { // esse resultado se relaciona com o returning="resultado" de @AfterReturning 
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterReturning no método: " + metodo);
+            System.out.println(">> O resultado é: " + resultado);
+            
+            // Vamos fazer um pós-processamento do dado
+            converterNomesDasContasParaMaiusculas(resultado);
+            
+            System.out.println("------- Após modificação -------");
+            
+            System.out.println(">> O resultado é: " + resultado);
+        }
+        
+        private void converterNomesDasContasParaMaiusculas(List<Conta> resultado) {
+            
+            for (Conta contaTemp : resultado) {
+                String maiuscula = contaTemp.getNome().toUpperCase();
+                contaTemp.setNome(maiuscula);
+            }
+        }
+    
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void beforeAdicionarConta(JoinPoint oJoinPoint) {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+            
+            // Mostra o método de assinatura
+            MethodSignature methodSig = (MethodSignature) oJoinPoint.getSignature();
+            System.out.println("Método: " + methodSig);
+            
+            // Mostra os argumentos do método
+            Object[] args = oJoinPoint.getArgs();
+            
+            for (Object argTemp : args) {
+                
+                System.out.println("Argumento: " + argTemp);
+                
+                if (argTemp instanceof Conta) {
+                    // Faz downcast e printa apenas coisas da casse Conta
+                    Conta aConta = (Conta) argTemp;
+                    
+                    System.out.println("Nome da conta: " + aConta.getNome());
+                    System.out.println("Nível da conta: " + aConta.getNivel());                
+                }            
+            }
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import java.util.List;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            
+            List<Conta> asContas = aContaDAO.encontrarContas(); // Esta linha corresponderá ao advice do @AfterReturning, o @AfterReturning intercepta o resultado de encontrarContas() e, se programado assim, modifica o resultado antes deste chegar em asContas
+            
+            System.out.println("=====================");
+            
+            System.out.println(asContas);
+            
+            System.out.println("\n");
+            
+            context.close();
+    
+        }
+    
+    }
+
+## @AfterThrowing<span id="aop_afterthrowing"></span>
+
+Eis os arquivos que você precisa atualizar:
+
+**ContaDAO.java**
+
+    package dominio.aop.dao;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Component
+    public class ContaDAO {
+        
+        private String nome;
+        private String codigo;
+        
+        public List<Conta> encontrarContas(boolean tripWire) {
+            // For academic purposes, vamos simular uma exceção aqui
+            if (tripWire == true) {
+                throw new RuntimeException("Seu programa vai dar erro. Há! Há! Há!");
+            }
+            
+            List<Conta> minhasContas = new ArrayList<>();
+            
+            Conta contaTemp1 = new Conta("Thiago", "Prata");
+            Conta contaTemp2 = new Conta("Carla", "Ouro");
+            Conta contaTemp3 = new Conta("Maria", "Bronze");
+            
+            minhasContas.add(contaTemp1);
+            minhasContas.add(contaTemp2);
+            minhasContas.add(contaTemp3);
+            
+            return minhasContas;
+        }
+    
+        public void adicionarConta(Conta aConta, boolean vip) {
+            System.out.println(getClass() + " em adicionarConta()");
+        }
+        
+        public void facaUmTrabalho() {
+            System.out.println(getClass() + " em facaUmTrabalho()");
+        }
+    
+        public String getNome() {
+            System.out.println(getClass() + " em getNome()");
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            System.out.println(getClass() + " em setNome()");
+            this.nome = nome;
+        }
+    
+        public String getCodigo() {
+            System.out.println(getClass() + " em getCodigo()");
+            return codigo;
+        }
+    
+        public void setCodigo(String codigo) {
+            System.out.println(getClass() + " em setCodigo()");
+            this.codigo = codigo;
+        }
+        
+    }
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import java.util.List;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.annotation.AfterReturning;
+    import org.aspectj.lang.annotation.AfterThrowing;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.reflect.MethodSignature;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @AfterThrowing(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                throwing="aExcecao")
+        public void afterThrowingEncontrarContasAdvice (JoinPoint oJoinPoint, Throwable aExcecao) {
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterThrowing no método: " + metodo);
+            System.out.println(">> A exceção é: " + aExcecao);
+        }
+        
+        @AfterReturning(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                returning="resultado")
+        public void afterReturningEncontrarContasAdvice (JoinPoint oJoinPoint, List<Conta> resultado) { 
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterReturning no método: " + metodo);
+            System.out.println(">> O resultado é: " + resultado);
+            
+            // Vamos fazer um pós-processamento do dado
+            converterNomesDasContasParaMaiusculas(resultado);
+            
+            System.out.println("------- Após modificação -------");
+            
+            System.out.println(">> O resultado é: " + resultado);
+        }
+        
+        private void converterNomesDasContasParaMaiusculas(List<Conta> resultado) {
+            
+            for (Conta contaTemp : resultado) {
+                String maiuscula = contaTemp.getNome().toUpperCase();
+                contaTemp.setNome(maiuscula);
+            }
+        }
+    
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void beforeAdicionarConta(JoinPoint oJoinPoint) {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+            
+            // Mostra o método de assinatura
+            MethodSignature methodSig = (MethodSignature) oJoinPoint.getSignature();
+            System.out.println("Método: " + methodSig);
+            
+            // Mostra os argumentos do método
+            Object[] args = oJoinPoint.getArgs();
+            
+            for (Object argTemp : args) {
+                
+                System.out.println("Argumento: " + argTemp);
+                
+                if (argTemp instanceof Conta) {
+                    // Faz downcast e printa apenas coisas da casse Conta
+                    Conta aConta = (Conta) argTemp;
+                    
+                    System.out.println("Nome da conta: " + aConta.getNome());
+                    System.out.println("Nível da conta: " + aConta.getNivel());                
+                }            
+            }
+        }
+    
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import java.util.List;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            
+            List<Conta> asContas = null;
+    
+            try {
+                // Será adicionada uma flag booleana para simular uma exceção
+                boolean tripWire = true;
+                
+                asContas = aContaDAO.encontrarContas(tripWire);
+            }
+            catch (Exception exc) {
+                System.out.println("Exceção pega: " + exc);
+            }
+            
+            System.out.println("=====================");
+            
+            System.out.println(asContas);
+            
+            System.out.println("\n");
+            
+            context.close();
+    
+        }
+    
+    }
+
+A propósito, `List<Conta>` é *null* por causa da exceção.
+
+## @After<span id="aop_after"></span>
+
+O `@After` roda independente do método ter tido sucesso ou erro. É como se numa relação `try-catch`, o `@After` fosse o `finally`.
+
+~Entretanto, o `@After` roda antes do `@AfterThrowing`.~ Isso não é mais verdade após a atualização do Spring 5.2.7 *(lançado em 9 de junho de 2020)*, é o contrário agora, o *advice* `@After` é invocado após qualquer *advice* `@AfterReturning` ou `@AfterThrowing` da mesma classe *aspect*.
+
+OK, vejamos os arquivos que precisamos editar:
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import java.util.List;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.annotation.After;
+    import org.aspectj.lang.annotation.AfterReturning;
+    import org.aspectj.lang.annotation.AfterThrowing;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.reflect.MethodSignature;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @After("execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))")
+        public void afterFinallyEncontrarContasAdvice (JoinPoint oJoinPoint) {
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @After( Finally) no método: " + metodo);
+            
+        }
+        
+        @AfterThrowing(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                throwing="aExcecao")
+        public void afterThrowingEncontrarContasAdvice (JoinPoint oJoinPoint, Throwable aExcecao) {
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterThrowing no método: " + metodo);
+            System.out.println(">> A exceção é: " + aExcecao);
+        }
+        
+        @AfterReturning(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                returning="resultado")
+        public void afterReturningEncontrarContasAdvice (JoinPoint oJoinPoint, List<Conta> resultado) { 
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterReturning no método: " + metodo);
+            System.out.println(">> O resultado é: " + resultado);
+            
+            // Vamos fazer um pós-processamento do dado
+            converterNomesDasContasParaMaiusculas(resultado);
+            
+            System.out.println("------- Após modificação -------");
+            
+            System.out.println(">> O resultado é: " + resultado);
+        }
+        
+        private void converterNomesDasContasParaMaiusculas(List<Conta> resultado) {
+            
+            for (Conta contaTemp : resultado) {
+                String maiuscula = contaTemp.getNome().toUpperCase();
+                contaTemp.setNome(maiuscula);
+            }
+        }
+    
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void beforeAdicionarConta(JoinPoint oJoinPoint) {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+            
+            // Mostra o método de assinatura
+            MethodSignature methodSig = (MethodSignature) oJoinPoint.getSignature();
+            System.out.println("Método: " + methodSig);
+            
+            // Mostra os argumentos do método
+            Object[] args = oJoinPoint.getArgs();
+            
+            for (Object argTemp : args) {
+                
+                System.out.println("Argumento: " + argTemp);
+                
+                if (argTemp instanceof Conta) {
+                    // Faz downcast e printa apenas coisas da casse Conta
+                    Conta aConta = (Conta) argTemp;
+                    
+                    System.out.println("Nome da conta: " + aConta.getNome());
+                    System.out.println("Nível da conta: " + aConta.getNivel());                
+                }            
+            }
+        }
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import java.util.List;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.dao.ContaDAO;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            ContaDAO aContaDAO = context.getBean("contaDAO", ContaDAO.class);
+            
+            List<Conta> asContas = null;
+    
+            try {
+                // Será adicionada uma flag booleana para simular uma exceção
+                boolean tripWire = true;
+                
+                asContas = aContaDAO.encontrarContas(tripWire);
+            }
+            catch (Exception exc) {
+                System.out.println("Exceção pega: " + exc);
+            }
+            
+            System.out.println("=====================");
+            
+            System.out.println(asContas);
+            
+            System.out.println("\n");
+            
+            context.close();
+    
+        }
+    
+    }
+
+## @Around<span id="aop_around"></span>
+
+Crie o pacote `dominio.aop.service` e dentro dele crie o arquivo `TrafegoFortunaService.java`:
+
+    package dominio.aop.service;
+    
+    import java.util.concurrent.TimeUnit;
+    
+    import org.springframework.stereotype.Component;
+    
+    @Component // Eu poderia ter usado @Service aqui, mas como @Service é subclasse de @Component, não tem problema
+    public class TrafegoFortunaService {
+        
+        public String getFortuna() {
+            
+            // Simula um delay
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            
+            // Retorna a fortuna
+            return "O trânsito estará bom quando você voltar pra casa";
+        }
+    
+    }
+
+E atualize os seguintes arquivos:
+
+**MeuLoggingAspect.java**
+
+    package dominio.aop.aspect;
+    
+    import java.util.List;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.ProceedingJoinPoint;
+    import org.aspectj.lang.annotation.After;
+    import org.aspectj.lang.annotation.AfterReturning;
+    import org.aspectj.lang.annotation.AfterThrowing;
+    import org.aspectj.lang.annotation.Around;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.reflect.MethodSignature;
+    import org.springframework.core.annotation.Order;
+    import org.springframework.stereotype.Component;
+    
+    import dominio.aop.Conta;
+    
+    @Aspect
+    @Component
+    @Order(1)
+    public class MeuLoggingAspect {
+        
+        @Around("execution(* dominio.aop.service.*.getFortuna(..))")
+        public Object aroundGetFortuna(ProceedingJoinPoint oProceedingJoinPoint) throws Throwable {
+            
+            String metodo = oProceedingJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @Around no método: " + metodo);
+            
+            long inicio = System.currentTimeMillis();
+            
+            Object resultado = oProceedingJoinPoint.proceed(); // proceed() executa o método alvo
+            
+            long fim = System.currentTimeMillis();
+            
+            long duracao = fim - inicio;
+            System.out.println("\nO método levou " + duracao / 1000 + " segundos para ser executado");
+            
+            return resultado;
+        }
+        
+        @After("execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))")
+        public void afterFinallyEncontrarContasAdvice (JoinPoint oJoinPoint) {
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @After( Finally) no método: " + metodo);
+            
+        }
+        
+        @AfterThrowing(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                throwing="aExcecao")
+        public void afterThrowingEncontrarContasAdvice (JoinPoint oJoinPoint, Throwable aExcecao) {
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterThrowing no método: " + metodo);
+            System.out.println(">> A exceção é: " + aExcecao);
+        }
+        
+        @AfterReturning(
+                pointcut="execution(* dominio.aop.dao.ContaDAO.encontrarContas(..))",
+                returning="resultado")
+        public void afterReturningEncontrarContasAdvice (JoinPoint oJoinPoint, List<Conta> resultado) { 
+            
+            String metodo = oJoinPoint.getSignature().toShortString();
+            
+            System.out.println(">> Executando @AfterReturning no método: " + metodo);
+            System.out.println(">> O resultado é: " + resultado);
+            
+            // Vamos fazer um pós-processamento do dado
+            converterNomesDasContasParaMaiusculas(resultado);
+            
+            System.out.println("------- Após modificação -------");
+            
+            System.out.println(">> O resultado é: " + resultado);
+        }
+        
+        private void converterNomesDasContasParaMaiusculas(List<Conta> resultado) {
+            
+            for (Conta contaTemp : resultado) {
+                String maiuscula = contaTemp.getNome().toUpperCase();
+                contaTemp.setNome(maiuscula);
+            }
+        }
+    
+        @Before("dominio.aop.aspect.ExpressoesAop.paraOPacoteDaoSemGettersESetters()")
+        public void beforeAdicionarConta(JoinPoint oJoinPoint) {
+            
+            System.out.println("\n>> Executando advice @Before no método");
+            
+            // Mostra o método de assinatura
+            MethodSignature methodSig = (MethodSignature) oJoinPoint.getSignature();
+            System.out.println("Método: " + methodSig);
+            
+            // Mostra os argumentos do método
+            Object[] args = oJoinPoint.getArgs();
+            
+            for (Object argTemp : args) {
+                
+                System.out.println("Argumento: " + argTemp);
+                
+                if (argTemp instanceof Conta) {
+                    // Faz downcast e printa apenas coisas da casse Conta
+                    Conta aConta = (Conta) argTemp;
+                    
+                    System.out.println("Nome da conta: " + aConta.getNome());
+                    System.out.println("Nível da conta: " + aConta.getNivel());                
+                }            
+            }
+        }
+    }
+
+**App.java**
+
+    package dominio.aop;
+    
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    import dominio.aop.service.TrafegoFortunaService;
+    
+    public class App {
+    
+        public static void main(String[] args) {
+            
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(MeuProjetoConfig.class);
+            
+            TrafegoFortunaService oTrafegoFortunaService = context.getBean("trafegoFortunaService", TrafegoFortunaService.class);
+            
+            String dados = oTrafegoFortunaService.getFortuna();
+            
+            System.out.println("\nMinha fortuna é: " + dados);
+            
+            System.out.println("FIM");
+            
+            context.close();
+    
+        }
+    
+    }
+
+## AOP no Spring MVC<span id="aop_springmvc"></span>
+
+Mude Eclipse para a perspectiva do Java EE. Agora abra aquele projeto que fizemos no capítulo do Spring MVC e Hibernate; se você não tiver mais os arquivos, você pode ver o código-font completo [aqui](#springmvchibernate_full).
+
+Adicione o arquivo JAR do AspectJ neste projeto.
+
+E rode o projeto pra ver se está tudo funcionando OK. *Não se esqueça de iniciar o MySQL...*
+
+### Arquivo XML<span id="aop_springmvc_configxml"></span>
+
+Abra o arquivo `webapp/WEB-INF/spring-mvc.xml` e adicione as linhas referentesao AOP. Ficará assim:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:tx="http://www.springframework.org/schema/tx"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xmlns:aop="http://www.springframework.org/schema/aop"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context
+            http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/mvc
+            http://www.springframework.org/schema/mvc/spring-mvc.xsd
+            http://www.springframework.org/schema/tx 
+            http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://www.springframework.org/schema/aop
+            http://www.springframework.org/schema/aop/spring-aop.xsd">
+    
+        <!-- Add AspectJ autoproxy support for AOP -->
+        <aop:aspectj-autoproxy />
+        
+        <!-- Add support for component scanning -->
+        <context:component-scan base-package="dominio.springmvchb" />
+    
+        <!-- Add support for conversion, formatting and validation support -->
+        <mvc:annotation-driven/>
+    
+        <!-- Define Spring MVC view resolver -->
+        <bean
+            class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+            <property name="prefix" value="/WEB-INF/view/" />
+            <property name="suffix" value=".jsp" />
+        </bean>
+    
+        <!-- Step 1: Define Database DataSource / connection pool -->
+        <bean id="myDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+              destroy-method="close">
+            <property name="driverClass" value="com.mysql.cj.jdbc.Driver" />
+            <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/cliente_web?useSSL=false" />
+            <property name="user" value="estudante" />
+            <property name="password" value="estudante" /> 
+    
+            <!-- these are connection pool properties for C3P0 -->
+            <property name="minPoolSize" value="5" />
+            <property name="maxPoolSize" value="20" />
+            <property name="maxIdleTime" value="30000" />
+        </bean>  
+        
+        <!-- Step 2: Setup Hibernate session factory -->
+        <bean id="sessionFactory"
+            class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+            <property name="dataSource" ref="myDataSource" />
+            <property name="packagesToScan" value="dominio.springmvchb.entity" />
+            <property name="hibernateProperties">
+               <props>
+                  <prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+                  <prop key="hibernate.show_sql">true</prop>
+               </props>
+            </property>
+       </bean>      
+    
+        <!-- Step 3: Setup Hibernate transaction manager -->
+        <bean id="myTransactionManager"
+                class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+            <property name="sessionFactory" ref="sessionFactory"/>
+        </bean>
+        
+        <!-- Step 4: Enable configuration of transactional behavior based on annotations -->
+        <tx:annotation-driven transaction-manager="myTransactionManager" />
+        
+        <!-- Add support for web resources -->
+        <mvc:resources location="/resources/" mapping="/resources/**"></mvc:resources> <!-- O ** diz que é pra incluir os sub-diretórios -->
+    
+    </beans>
+
+A propósito, se você fizesse a configuração via arquivos Java, sem XML, você usaria `@EnableAspectJAutoProxy`.
+
+### Aspect<span id="aop_springmvc_aspect"></span>
+
+Crie o pacote `dominio.springmvchb.aspect` e dentro dele crie a classe `CRMLoggingAspect`
+
+    package dominio.springmvchb.aspect;
+    
+    import java.util.logging.Logger;
+    
+    import org.aspectj.lang.JoinPoint;
+    import org.aspectj.lang.annotation.AfterReturning;
+    import org.aspectj.lang.annotation.Aspect;
+    import org.aspectj.lang.annotation.Before;
+    import org.aspectj.lang.annotation.Pointcut;
+    import org.springframework.stereotype.Component;
+    
+    @Aspect
+    @Component
+    public class CRMLoggingAspect {
+        
+        // Configurar logger
+        private Logger logger = Logger.getLogger(getClass().getName()); // Logging é uma API que permite aos usuários rastrear o erro gerado a partir de classes específicas. O getLogger é um método estático presente na classe Logger que cria um logger se não estiver presente no sistema com o nome fornecido
+        
+        // Configurar declarações pointcut para Controller
+        @Pointcut("execution(* dominio.springmvchb.controller.*.*(..))")
+        private void paraPacoteDeController() {}
+        
+        // Configurar declarações pointcut para Service
+        @Pointcut("execution(* dominio.springmvchb.service.*.*(..))")
+        private void paraPacoteDeService() {}
+        
+        // Configurar declarações pointcut para DAO
+        @Pointcut("execution(* dominio.springmvchb.dao.*.*(..))")
+        private void paraPacoteDeDao() {}
+        
+        // Combino os pointcuts aqui
+        @Pointcut("paraPacoteDeController() || paraPacoteDeService() || paraPacoteDeDao()")
+        private void paraFluxoDoApp() {}
+        
+        // Adicionar advice @Before
+        @Before("paraFluxoDoApp()")
+        public void before(JoinPoint joinPoint) {
+            
+            // Exibe o método que estamos chamando
+            String method = joinPoint.getSignature().toShortString();
+            
+            // Exibe os argumentos do método
+            logger.info("=======>> em @Before, é chamado o método: " + method);
+            
+            // Pega os aergumentos
+            Object[] args = joinPoint.getArgs();
+            
+            // Faz um loop e exibe os argumentos
+            for (Object argTemp : args) {
+                logger.info(">>>>>>>>> em @Before, é usado o argumento: " + argTemp);
+            }
+        }
+        
+        // Adicionar advice @AfterReturning
+        @AfterReturning(
+                pointcut="paraFluxoDoApp()",
+                returning="resultado")
+        public void afterReturning(JoinPoint joinPoint, Object resultado) {
+            
+            // Exibe o método do qual estamos retornando
+            String method = joinPoint.getSignature().toShortString();
+            
+            // Exibe os argumentos do método
+            logger.info("=======>> em @AfterReturning, é retornado o método: " + method);
+            
+            // Exibe o resultado
+            logger.info("=======>> Resultado: " + resultado);
+            
+        }
+    
+    }
