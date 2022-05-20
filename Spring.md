@@ -10992,4 +10992,553 @@ Já essa encriptação das senhas "12345" foi obtida por [este site](https://www
 
 E... é só isso, não precisamos editar mais nada 🙂
 
+## BÔNUS: O projeto final<span id="springsecurit_final"></span>
+
+No Eclipse, mude para a perspectiva do Java EE.
+
+`File` => `New` => `Maven Project`
+
+Marque a opção para criar um projeto simples. Clique em `Next`
+
+Em *Group Id* ponha `dominio`
+
+Em *Artifact Id* ponha `springsecurity`
+
+Abra o MySQL e use a seguinte série de comandos:
+
+    drop database if exists `springsecurity`;
+    create database `springsecurity`;
+    
+    use `springsecurity`;
+    
+    drop table if exists `users`;
+    create table users(
+        username varchar(50) not null primary key,
+        password varchar(68) not null,
+        enabled boolean not null
+    );
+    
+    create table authorities (
+        username varchar(50) not null,
+        authority varchar(50) not null,
+        constraint fk_authorities_users foreign key(username) references users(username)
+    );
+    create unique index ix_auth_username on authorities (username,authority);
+    
+    insert into users values
+        ("marcos", "{bcrypt}$2a$10$oZgySAH78tJ4VRQg9T8NCubIhwmI0k2KQBvATLSqrxY8HnJxcYXdu", 1),
+        ("maria", "{bcrypt}$2a$10$oZgySAH78tJ4VRQg9T8NCubIhwmI0k2KQBvATLSqrxY8HnJxcYXdu", 1),
+        ("thiago", "{bcrypt}$2a$10$oZgySAH78tJ4VRQg9T8NCubIhwmI0k2KQBvATLSqrxY8HnJxcYXdu", 1);
+    
+    insert into authorities values
+        ("marcos", "ROLE_FUNCIONARIO"),
+        ("maria", "ROLE_FUNCIONARIO"),
+        ("thiago", "ROLE_FUNCIONARIO"),
+        ("maria", "ROLE_GERENTE"),
+        ("thiago", "ROLE_ADMINISTRADOR");
+
+Edite o arquivo `pom.xml` para que ele fique assim:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springsecurity</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <packaging>war</packaging>
+    
+        <name>springsecurity</name>
+    
+        <properties>
+            <springframework.version>5.3.19</springframework.version>
+            <springsecurity.version>5.6.3</springsecurity.version>
+    
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Spring Framework -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <!-- Spring Security -->
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-web</artifactId>
+                <version>${springsecurity.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-config</artifactId>
+                <version>${springsecurity.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-taglibs</artifactId>
+                <version>${springsecurity.version}</version>
+            </dependency>
+    
+            <!-- Add MySQL and C3P0 support -->
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>8.0.29</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>com.mchange</groupId>
+                <artifactId>c3p0</artifactId>
+                <version>0.9.5.5</version>
+            </dependency>
+    
+            <!-- Servlet, JSP and JSTL support -->
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>jstl</artifactId>
+                <version>1.2</version>
+            </dependency>
+    
+            <!-- to compensate for java 9+ not including jaxb -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.0</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>3.8.1</version>
+                <scope>test</scope>
+            </dependency>
+    
+        </dependencies>
+    
+        <!-- Add support for Maven WAR Plugin -->
+    
+        <build>
+            <finalName>springsecurity</finalName>
+            <pluginManagement>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+            </pluginManagement>
+        </build>
+    
+    </project>
+
+Na pasta `src/main/java`, crie o pacote `dominio.springsecurity.config` e dentro dele crie as classes:
+
+**MeuSecurityConfig.java**
+
+    package dominio.springsecurity.config;
+    
+    import javax.sql.DataSource;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+    import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+    import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+    import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+    import org.springframework.security.core.userdetails.User;
+    import org.springframework.security.core.userdetails.User.UserBuilder;
+    
+    @Configuration
+    @EnableWebSecurity
+    public class MeuSecurityConfig extends WebSecurityConfigurerAdapter {
+        
+        @Autowired
+        private DataSource securityDataSource;
+    
+        @Override
+        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+            
+            // Fala para o Spring Security para usar a autenticação JDBC com nossa fonte de dados
+            auth.jdbcAuthentication().dataSource(securityDataSource);
+        }
+    
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.authorizeRequests()
+                .antMatchers("/").hasRole("FUNCIONARIO")
+                .antMatchers("/lideres/**").hasRole("GERENTE")
+                .antMatchers("/sistema/**").hasRole("ADMINISTRADOR")
+                .and()
+                    .formLogin().loginPage("/paginaDeLogin")
+                    .loginProcessingUrl("/autenticaUsuario")
+                    .permitAll()
+                .and()
+                    .logout()
+                    .permitAll()
+                .and()
+                    .exceptionHandling()
+                    .accessDeniedPage("/acessoNegado");
+        }
+        
+    }
+
+**MinhaAppConfig.java**
+
+    package dominio.springsecurity.config;
+     
+    import java.beans.PropertyVetoException;
+    import java.util.logging.Logger;
+    
+    import javax.sql.DataSource;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.ComponentScan;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.PropertySource;
+    import org.springframework.core.env.Environment;
+    import org.springframework.web.servlet.ViewResolver;
+    import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+    import org.springframework.web.servlet.view.InternalResourceViewResolver;
+    
+    import com.mchange.v2.c3p0.ComboPooledDataSource;
+    
+    @Configuration
+    @EnableWebMvc
+    @ComponentScan(basePackages="dominio.springsecurity")
+    @PropertySource("classpath:persistence-mysql.properties") // Os arquivos de src/main/resources são automaticamente copiados para o classpath durante a build do Maven
+    public class MinhaAppConfig {
+        
+        @Autowired // Environment env é autowired porque este Bean é automaticamente criado pelo Spring
+        private Environment env; // env reterá os dados lidos pelo arquivo .properties
+        
+        private Logger logger = Logger.getLogger(getClass().getName()); // Não é obrigatório, é só para diagnóstico
+            
+        @Bean
+        public ViewResolver viewResolver () {
+            
+            InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+            
+            viewResolver.setPrefix("/WEB-INF/view/");
+            viewResolver.setSuffix(".jsp");
+            
+            return viewResolver;
+        }
+        
+        @Bean
+        public DataSource securityDataSource() {
+            
+            // Cria um connection pool
+            ComboPooledDataSource securityDataSource = new ComboPooledDataSource();
+            
+            // Define a classe de driver do JDBC
+            try {
+                securityDataSource.setDriverClass(env.getProperty("jdbc.driver"));
+            } catch (PropertyVetoException e) {
+                throw new RuntimeException(e);
+            }
+            
+            // Faz log do connection props, só para termos certeza que estamos lendo dados do arquivo properties
+            logger.info(">>> jdbc.url: " + env.getProperty("jdbc.driver"));
+            logger.info(">>> jdbc.user: " + env.getProperty("jdbc.user"));
+            
+            // Define o connection props do banco de dados
+            securityDataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+            securityDataSource.setUser(env.getProperty("jdbc.user"));
+            securityDataSource.setPassword(env.getProperty("jdbc.password"));
+            
+            // Define o connection pool props
+            securityDataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
+            securityDataSource.setMinPoolSize(getIntProperty("connection.pool.minPoolSize"));
+            securityDataSource.setMaxPoolSize(getIntProperty("connection.pool.maxPoolSize"));
+            securityDataSource.setMaxIdleTime(getIntProperty("connection.pool.maxIdleTime"));
+            
+            return securityDataSource;
+        }
+        
+        // Método para nos ajudar a ler o environment property e convertê-lo para int
+        private  int getIntProperty(String propName) {
+            String propVal = env.getProperty(propName);
+            int intPropVal = Integer.parseInt(propVal);
+            return intPropVal;
+        }
+    
+    }
+
+**SecurityWebApplicationInitializer.java**
+
+    package dominio.springsecurity.config;
+    
+    import org.springframework.security.web.context.AbstractSecurityWebApplicationInitializer;
+    
+    public class SecurityWebApplicationInitializer extends AbstractSecurityWebApplicationInitializer {
+    
+    }
+
+**MeuSpringMvcDispatcherServletInitializer.java**
+
+    package dominio.springsecurity.config;
+    
+    import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+    
+    public class MeuSpringMvcDispatcherServletInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+    
+        @Override
+        protected Class<?>[] getRootConfigClasses() { // Não teremos arquivos de configuração root no nosso projeto
+            // TODO Auto-generated method stub
+            return null;
+        }
+    
+        @Override
+        protected Class<?>[] getServletConfigClasses() {
+    
+            return new Class[] {MinhaAppConfig.class};
+        }
+    
+        @Override
+        protected String[] getServletMappings() {
+    
+            return new String[] { "/" };
+        }
+    
+    }
+
+Na pasta `src/main/java`, crie o pacote `dominio.springsecurity.controller` e dentro dele crie as classes:
+
+**MeuController.java**
+
+    package dominio.springsecurity.controller;
+    
+    import org.springframework.stereotype.Controller;
+    import org.springframework.web.bind.annotation.GetMapping;
+    
+    @Controller
+    public class MeuController {
+        
+        @GetMapping("/")
+        public String mostrarHome() {        
+            return "home";        
+        }
+        
+        @GetMapping("/lideres")
+        public String mostrarLiders() {        
+            return "lideres";        
+        }
+        
+        @GetMapping("/sistema")
+        public String mostrarSistema() {        
+            return "sistema";        
+        }
+    
+    }
+
+**LoginController.java**
+
+    package dominio.springsecurity.controller;
+    
+    import org.springframework.stereotype.Controller;
+    import org.springframework.web.bind.annotation.GetMapping;
+    
+    @Controller
+    public class LoginController {
+    
+        @GetMapping("/paginaDeLogin")
+        public String paginaDeLogin() {
+            return "login";
+        }
+        
+        @GetMapping("/acessoNegado")
+        public String paginaacessoNegado() {
+            return "acessonegado";
+        }
+    }
+
+Na pasta `src/main/resources`, crie o arquivo abaixo:
+
+**persistence-mysql.properties**
+
+    #
+    # JDBC connection properties
+    #
+    jdbc.driver=com.mysql.cj.jdbc.Driver
+    jdbc.url=jdbc:mysql://localhost:3306/springsecurity?useSSL=false&serverTimezone=UTC
+    jdbc.user=estudante
+    jdbc.password=estudante
+    
+    #
+    # Connection pool properties
+    #
+    connection.pool.initialPoolSize=5
+    connection.pool.minPoolSize=5
+    connection.pool.maxPoolSize=20
+    connection.pool.maxIdleTime=3000
+
+Dentro da pasta `webapp`, caso não exista, crie a pasta `WEB-INF` e dentro desta última a pasta `view`. Dentro da pasta `view`, crie os seguintes arquivos JSP:
+
+**login.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+    
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Página de Login</title>
+    </head>
+    <body>
+        <h3>Página de login</h3>
+        
+        <form:form action="${pageContext.request.contextPath}/autenticaUsuario" method="POST">
+        
+            <c:if test="${param.error != null}">
+                <i>Login ou senha inválidos</i>
+            </c:if>
+            
+            <c:if test="${param.logout != null}">
+                <i>Você foi deslogado</i>
+            </c:if>
+        
+            <p>
+                Nome de usuário: <input type="text" name="username" />
+            </p>
+            
+            <p>
+                Senha: <input type="password" name="password" />
+            </p>
+            
+            <input type="submit" value="Login" />
+        
+        </form:form>
+        
+    </body>
+    </html>
+
+**home.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+    <%@ taglib prefix="security" uri="http://www.springframework.org/security/tags" %>
+    
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Spring Security</title>
+    </head>
+    <body>
+    
+        <p>Olá mundo</p>
+        
+        <hr>
+        
+        <p>
+            Nome de usuário: <security:authentication property="principal.username" />
+        </p>
+        <p>
+            <i>Role</i>: <security:authentication property="principal.authorities" />
+        </p>
+        
+        <security:authorize access="hasRole('GERENTE')">
+    	    <p>
+    	        <a href="${pageContext.request.contextPath}/lideres">Reunião da gerência</a>
+    	    </p>
+        </security:authorize>
+        
+        <security:authorize access="hasRole('ADMINISTRADOR')">
+    	    <p>
+    	        <a href="${pageContext.request.contextPath}/sistema">Administração do sistema</a>
+    	    </p>
+        </security:authorize>
+        
+        <hr>
+        
+        <form:form action="${pageContext.request.contextPath}/logout" method="POST">
+            <input type="submit" value="Logout" />
+        </form:form>
+    
+    </body>
+    </html>
+
+**lideres.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Reunião da gerência</title>
+    </head>
+    <body>
+    
+        <h1>Reunião da gerência</h1>
+        
+        <a href="${pageContext.request.contextPath}/">Retornar à página inicial</a>
+    
+    </body>
+    </html>
+
+**sistema.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Administração do sistema</title>
+    </head>
+    <body>
+    
+        <h1>Administração do sistema</h1>
+        
+        <a href="${pageContext.request.contextPath}/">Retornar à página inicial</a>
+        
+    </body>
+    </html>
+
+**acessonegado.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Acesso Negado</title>
+    </head>
+    <body>
+        <h1>Acesso negado</h1>
+        
+        <p>Você não tem permissão para acessar esta página</p>
+        
+        <a href="${pageContext.request.contextPath}/">Retornar à página inicial</a>
+    </body>
+    </html>
+
+
+
 # Spring REST<span id="springrest"></span>
