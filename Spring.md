@@ -162,6 +162,8 @@
 
 		* [Encriptação de senha](#springsecurit_jdbc_crypt)
 
+	* [BÔNUS: O projeto final](#springsecurit_final)
+
 * [Spring REST](#springrest)
 
 # Introdução<span id="intro"></span>
