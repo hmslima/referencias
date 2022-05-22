@@ -166,6 +166,34 @@
 
 * [Spring REST](#springrest)
 
+	* [JSON Data Binding](#springrest_jsondatabinding)
+
+	* [Conceitos básicos](#springrest_basicconcepts)
+
+	* [REST Controller](#springrest_restcontroller)
+
+	* [Coletar POJO como JSON](#springrest_pojojson)
+
+	* [@PathVariable](#springrest_pathvariable)
+
+	* [Exception Handling](#springrest_exceptionhandling)
+
+	* [CRUD](#springrest_crud)
+
+		* [Leitura de um único cliente](#springrest_crud_r1)
+
+		* [Exception Handling](#springrest_crud_exceptionhandling)
+
+		* [Adição de um cliente](#springrest_crud_c)
+
+		* [Atualização de um cliente](#springrest_crud_u)
+
+		* [Deleção de um cliente](#springrest_crud_d)
+
+	* [BÔNUS: O projeto final](#springrest_final)
+
+* [Spring Boot](#springboot)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -4881,7 +4909,7 @@ Baixe o [Java Connector pra MySQL](https://dev.mysql.com/downloads/connector/j/)
 
 Na pasta `src/main/java`, crie o pacote `dominio.jdbc`.
 
-Agora criaremos um *servlet* neste pacote básico para testar a conexão. Clique no pacote, `New` => `Servlet`, chamarei o arquivo de `ServletDbTeste`, dê `Next` até você chegar numa janela onde você tem algumas opções para deixar marcadas, deixe apenas marcados Inherited abstract methods` e `doGet`.
+Agora criaremos um *servlet* neste pacote básico para testar a conexão. Clique no pacote, `New` => `Servlet`, chamarei o arquivo de `ServletDbTeste`, dê `Next` até você chegar numa janela onde você tem algumas opções para deixar marcadas, deixe apenas marcados `Inherited abstract methods` e `doGet`.
 
     package dominio.jdbc;
     
@@ -7294,7 +7322,7 @@ E por fim, atualize o DAO:
 
 ## BÔNUS: O projeto completo<span id="springmvchibernate_full"></span>
 
-Como não quero me repetir: se você ainda não tem os arquivos JAR configurados, vá até o início deste capítulo e depois volte aqui.
+Como não quero me repetir: se você ainda não tem os arquivos JAR e o banco de dados configurados, vá até o início deste capítulo e depois volte aqui.
 
 **/cliente-web/src/main/webapp/index.jsp**
 
@@ -11544,3 +11572,2894 @@ Dentro da pasta `webapp`, caso não exista, crie a pasta `WEB-INF` e dentro dest
 
 
 # Spring REST<span id="springrest"></span>
+
+*<b>Re</b>presentational <b>S</b>tate <b>T</b>ransfer* (REST), ou “Transferência Representacional de Estado” em português, é um estilo de arquitetura de software que define um conjunto de restrições a serem usadas para a criação de serviços Web, é uma abordagem leve para a comunicação entre aplicações, como um aplicativo que exibe o tempo *(clima)* atual de uma cidade e consulta os dados armazenados em um servidor. 
+
+Tanto no lado do servidor quanto no do cliente, podemos utilizar qualquer linguagem de programação. Até mesmo o formato pode ser qualquer um, como XMLou JSON, sendo que este último é o mais utilizado por ser mais moderno.
+
+No nosso estudo, criaremos um aplicativo CRM que pega dados de um serviço CRM feito em Spring Rest. CRM = Customer Relationship Manager
+
+*A propósito, se você quiser encontrar APIs, você pode visitar o site [ProgrammableWeb](https://www.programmableweb.com/).*
+
+Ainda sobre conceitos, você precisa saber que geralmente os termos abaixo são sinônimos:
+
+REST API = REST Web Services = REST Services
+
+RESTful API = RESTful Web Services = RESTful Services
+
+Até mesmo REST e RESTful são praticamente a mesma coisa, uma API RESTful é aquela que se adere à arquitetura REST.
+
+## JSON Data Binding<span id="springrest_jsondatabinding"></span>
+
+Em nosso projeto, faremos o processo de "*JSON Binding*", que consiste no processo de converter dados JSON em um POJO Java. Esse processo pode receber outros nomes, como: "*Mapping*", "*Serialization*"/"*Deserialization*", "*Marshalling*"/"*Unmarshalling*".
+
+No Eclipse, mude para a perspectiva do Java EE.
+
+`File` => `New` => `Maven Project`
+
+Marque a opção para criar um projeto simples. Clique em `Next`
+
+Em *Group Id* ponha `dominio`
+
+Em *Artifact Id* ponha `springrest`
+
+Seu arquivo `pom.xml` deverá ficar assim:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springrest</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <packaging>jar</packaging>
+    
+        <properties>
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+        </dependencies>
+    </project>
+
+*Não se esqueça e atualizar o projeto Maven.*
+
+Na raiz do seu projeto, crie a pasta `dados` e dentro deles crie os seguintes arquivos JSON:
+
+**exemplo-simples.json**
+
+    {
+    	"id": 23,
+    	"nome": "Lúcio",
+    	"sobrenome": "Ribeiro",
+    	"ativo": true
+    }
+
+**exemplo-completo.json**
+
+    {
+    	"id": 23,
+    	"nome": "Lúcio",
+    	"sobrenome": "Ribeiro",
+    	"ativo": true,
+    	"endereco": {
+    		"rua": "Rua Graveteiros",
+    		"cidade": "Belo Horizonte",
+    		"estado": "Minas Gerais",
+    		"cep": "31950-210",
+    		"pais": "Brasil"
+    	},
+    	"linguagens" : ["Java", "C++", "Python", "Javascript"]
+    }
+
+Na pasta `src/main/java`, crie o pacote `dominio.jackson.json` e dentro deste pacote crie as seguintes classes:
+
+**Estudante.java**
+
+    package dominio.jackson.json;
+    
+    public class Estudante {
+        
+        private int id;
+        private String nome;
+        private String sobrenome;
+        private boolean ativo;
+        
+        public Estudante () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public boolean isAtivo() {
+            return ativo;
+        }
+    
+        public void setAtivo(boolean ativo) {
+            this.ativo = ativo;
+        }
+        
+    }
+
+**Driver.java**
+
+    package dominio.jackson.json;
+    
+    import java.io.File;
+    
+    import com.fasterxml.jackson.databind.ObjectMapper;
+    
+    public class Driver {
+    
+        public static void main(String[] args) {
+            
+            try {
+                
+                ObjectMapper mapper = new ObjectMapper();
+                
+                Estudante estudante = mapper.readValue(new File("dados/exemplo-simples.json"), Estudante.class);
+                
+                System.out.println("Nome completo: " + estudante.getNome() + " " + estudante.getSobrenome());
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    
+        }
+    
+    }
+
+Você já pode testar o aplicativo.
+
+Agora vamos usar um dado mais complexo, com objeto aninhado e *array*:
+
+Como temos um objeto aninhado, vamos criar sua classe junto com as outras:
+
+**Endereco.java**
+
+    package dominio.jackson.json;
+    
+    public class Endereco {
+        
+        private String rua;
+        private String cidade;
+        private String estado;
+        private String cep;
+        private String pais;
+        
+        public Endereco () {
+            
+        }
+    
+        public String getRua() {
+            return rua;
+        }
+    
+        public void setRua(String rua) {
+            this.rua = rua;
+        }
+    
+        public String getCidade() {
+            return cidade;
+        }
+    
+        public void setCidade(String cidade) {
+            this.cidade = cidade;
+        }
+    
+        public String getEstado() {
+            return estado;
+        }
+    
+        public void setEstado(String estado) {
+            this.estado = estado;
+        }
+    
+        public String getCep() {
+            return cep;
+        }
+    
+        public void setCep(String cep) {
+            this.cep = cep;
+        }
+    
+        public String getPais() {
+            return pais;
+        }
+    
+        public void setPais(String pais) {
+            this.pais = pais;
+        }
+    
+    }
+
+E atualizamos as classes existentes:
+
+**Estudante.java**
+
+    package dominio.jackson.json;
+    
+    public class Estudante {
+        
+        private int id;
+        private String nome;
+        private String sobrenome;
+        private boolean ativo;
+        
+        private Endereco endereco;
+        private String[] linguagens;
+        
+        public Estudante () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public boolean isAtivo() {
+            return ativo;
+        }
+    
+        public void setAtivo(boolean ativo) {
+            this.ativo = ativo;
+        }
+    
+        public Endereco getEndereco() {
+            return endereco;
+        }
+    
+        public void setEndereco(Endereco endereco) {
+            this.endereco = endereco;
+        }
+    
+        public String[] getLinguagens() {
+            return linguagens;
+        }
+    
+        public void setLinguagens(String[] linguagens) {
+            this.linguagens = linguagens;
+        }
+        
+    }
+
+**Driver.java**
+
+    package dominio.jackson.json;
+    
+    import java.io.File;
+    
+    import com.fasterxml.jackson.databind.ObjectMapper;
+    
+    public class Driver {
+    
+        public static void main(String[] args) {
+            
+            try {
+                
+                ObjectMapper mapper = new ObjectMapper();
+                
+                Estudante estudante = mapper.readValue(new File("dados/exemplo-completo.json"), Estudante.class); // Observe que mudei o arquivo...
+                
+                System.out.println("Nome completo: " + estudante.getNome() + " " + estudante.getSobrenome());
+                System.out.println("Endereço: " + estudante.getEndereco().getRua() + ", " + estudante.getEndereco().getCidade());
+                System.out.print("Linguagens:");
+                for (String tempLang : estudante.getLinguagens()) {
+                    System.out.print(" " + tempLang);
+                }
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+    
+        }
+    
+    }
+
+Você já pode testar o aplicativo.
+
+Uma questão é que, se uma nova propriedade for adicionada ao JSON e não atualizarmos nosso código, haverá um erro na hora da exceção, ainda que não usemos essa nova propriedade. Faça um teste, adicione uma nova propriedade ao arquivo JSON e tente rodar o programa novamente.
+
+Para que não dê erro, basta usar a *annotation* `@JsonIgnoreProperties(ignoreUnknown=true)` sobre a classe usada como POJO.
+
+    package dominio.jackson.json;
+    
+    import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+    
+    @JsonIgnoreProperties(ignoreUnknown=true)
+    public class Estudante {
+        
+        private int id;
+        private String nome;
+        private String sobrenome;
+        private boolean ativo;
+
+    [...]
+
+## Conceitos básicos<span id="springrest_basicconcepts"></span>
+
+Vamos entender como funcionam os métodos HTTP em operações CRUD.
+
+| Método | Operação CRUD                      |
+| ------ | ---------------------------------- |
+| POST   | Cria uma nova entidade             |
+| GET    | Lê uma ou mais entidades           |
+| PUT    | Atualiza uma entidade já existente |
+| DELETE | Deleta uma entidade já existente   |
+
+O aplicativo manda um *request* para o servidor e o servidor manda de volta um *ressponse*.
+
+Um *request* é composto por:
+
+* Request line: o comando HTTP
+
+* Header variables: metadados do *request*
+
+* Message body: conteúdos da mensagem
+
+Um *response* é composto por:
+
+* Response line: protocolo do servidor ou *[status code](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes)*
+
+* Header variables: metadados do *response*
+
+* Message body: conteúdos da mensagem
+
+Também é importante conhecer os conteúdos MIME *(<b>M</b>ultipurpose <b>I</b>nternet <b>M</b>ail-<b>E</b>xtension)*, é a descrição do formato de mensagem, o *"Content-Type"*. Exemplos de MIME: `text/html`, `text/plain`, `application/json`, `application/xml`.
+
+Precisaremos de um client tool para enviar *requests* para o serviço web REST, alguns exemplos são curl, Postman, etc, usaremos este último. Você pode usar sites como [JSON Test](http://www.jsontest.com/) ou [{JSON} Placeholder](https://jsonplaceholder.typicode.com/) para testar o Postman.
+
+## REST Controller<span id="springrest_restcontroller"></span>
+
+O Spring MVC provê suporte para o Spring REST.
+
+OK, crie um projeto Maven cujo *Artefact Id* será `springrest` e nosso arquivo `pom.xml` será este:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springrest</artifactId>
+        <version>1.0</version>
+        <packaging>war</packaging>
+    
+        <properties>
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Add Spring MVC and REST support -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>5.3.20</version>
+            </dependency>
+    
+            <!-- Add Jackson for JSON converters -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+            <!-- Add Servlet support for 
+                 Spring's AbstractAnnotationConfigDispatcherServletInitializer -->
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+    
+        </dependencies>
+        
+        <!-- Add support for Maven WAR Plugin -->
+    
+        <build>
+            <finalName>springrest</finalName>
+            <pluginManagement>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+            </pluginManagement>
+        </build>
+    </project>
+
+Na pasta `src/main/java`, crie o pacote `dominio.spring.config` e dentro dele crie as classes:
+
+**AppConfig.java**
+
+    package dominio.spring.config;
+    
+    import org.springframework.context.annotation.ComponentScan;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+    
+    @Configuration
+    @EnableWebMvc
+    @ComponentScan("dominio.spring")
+    public class AppConfig {
+    
+    }
+
+**AppSpringMvcDispatcherServletInitializer.java**
+
+    package dominio.spring.config;
+    
+    import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+    
+    public class AppSpringMvcDispatcherServletInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+    
+        @Override
+        protected Class<?>[] getRootConfigClasses() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+    
+        @Override
+        protected Class<?>[] getServletConfigClasses() {
+            return new Class[] {AppConfig.class};
+        }
+    
+        @Override
+        protected String[] getServletMappings() {
+            return new String[] {"/"};
+        }
+    
+    }
+
+Agora crie o pacote `dominio.spring.rest` e crie a classe `TestRestController`:
+
+    package dominio.spring.rest;
+    
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    @RestController
+    @RequestMapping("/teste")
+    public class TestRestController {
+    
+        @GetMapping("/ola")
+        public String dizerOla() {
+            return "Olá";
+        }
+    }
+
+`@RestController` é uma extensão de `@Controller`
+
+Rode como servidor. Naturalmente que você terá um erro 404 porque ainda não temos uma página inicial, mas o endereço [http://localhost:8080/springrest/teste/ola](http://localhost:8080/springrest/teste/ola) funcionará. Tente abrrir esse endereço no Postman para você ver o resultado.
+
+Por uma questão de conveninência, vamos adicionar uma página inicial. Na pasta `src/main/webapp`, crie o arquivo `index.jsp`
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Spring REST Demo</title>
+    </head>
+    <body>
+    
+    <p>Na verdade, os testes estão sendo feitos neste <a href="${pageContext.request.contextPath}/teste/ola">link</a></p>
+    
+    </body>
+    </html>
+
+Você verá que o Eclipse está apresentando algumas mensagens de erro para o arquivo JSP, então vamos adicionar mais uma dependência ao nosso projeto, mais precisamente o `javax.servlet.jsp-api`. De novo, observe que essa parte, inclusive essa dependência, não é obrigatório, é só por uma questão de conveniência.
+
+Veja como ficou o arquivo `pom.xml` atualizado.
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springrest</artifactId>
+        <version>1.0</version>
+        <packaging>war</packaging>
+    
+        <properties>
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Add Spring MVC and REST support -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>5.3.20</version>
+            </dependency>
+    
+            <!-- Add Jackson for JSON converters -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+            <!-- Add Servlet support for 
+                 Spring's AbstractAnnotationConfigDispatcherServletInitializer -->
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+    
+            <!-- Add support for JSP ... get rid of Eclipse error -->
+            <dependency>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
+                <version>2.3.3</version>
+            </dependency>
+    
+        </dependencies>
+    
+        <!-- Add support for Maven WAR Plugin -->
+    
+        <build>
+            <finalName>springrest</finalName>
+            <pluginManagement>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+            </pluginManagement>
+        </build>
+    </project>
+
+## Coletar POJO como JSON<span id="springrest_pojojson"></span>
+
+Crie o pacote `dominio.spring.entity` e dentro dele a classe `Estudante`:
+
+    package dominio.spring.entity;
+    
+    public class Estudante {
+        
+        private String nome;
+        private String sobrenome;
+        
+        public Estudante() {
+            
+        }
+        
+        public Estudante(String nome, String sobrenome) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+        
+    }
+
+No pacote `dominio.spring.rest`, crie a classe `EstudanteRestController`:
+
+    package dominio.spring.rest;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.spring.entity.Estudante;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EstudanteRestController {
+        
+        // Define o endpoint para "/estudantes", retorna  alista de todos os estudantes
+        @GetMapping("/estudantes")
+        public List<Estudante> getEstudantes() {
+            
+            List<Estudante> estudantes = new ArrayList<>();
+            
+            estudantes.add(new Estudante("Júnior", "Galvão"));
+            estudantes.add(new Estudante("Virgínia", "Araújo"));
+            estudantes.add(new Estudante("Gleize", "Smith"));
+            estudantes.add(new Estudante("Rui", "Tavares"));
+            
+            return estudantes;
+        }
+    
+    }
+
+Rode o projeto como servidor. Se você quiser o link para agilizar, [aqui está](http://localhost:8080/springrest/api/estudantes).
+
+No plano de fundo, o Spring faz uso do Jackson para converter os POJOs em JSON.
+
+Pela conveniência, podemos editar nosso arquivo JSP:
+
+**index.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Spring REST Demo</title>
+    </head>
+    <body>
+    
+    <ul>
+        <li><a href="${pageContext.request.contextPath}/teste/ola">/teste/ola</a></li>
+        <li><a href="${pageContext.request.contextPath}/api/estudantes">/api/estudantes</a></li>
+    </ul>
+    
+    </body>
+    </html>
+
+Se por acaso for mostrado menos que 4 estudantes, isso será devido a um bug de *caching* do Eclipse, uma possível solução é você adicionar um `?` no final da URL.
+
+## @PathVariable<span id="springrest_pathvariable"></span>
+
+Através de *Path Variables*, podemos recuperar um único estudante pelo id *(`api/estudantes/{id}`)*
+
+Como precisaremos usar algumas anotações ainda não suportadas pelo nosso arquivo `pom.xml` atual, vamos atualizar nosso arquivo:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springrest</artifactId>
+        <version>1.0</version>
+        <packaging>war</packaging>
+    
+        <properties>
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Add Spring MVC and REST support -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>5.3.20</version>
+            </dependency>
+    
+            <!-- Add Jackson for JSON converters -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+            <!-- Add Servlet support for 
+                 Spring's AbstractAnnotationConfigDispatcherServletInitializer -->
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+    
+            <!-- Add support for JSP ... get rid of Eclipse error -->
+            <dependency>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
+                <version>2.3.3</version>
+            </dependency>
+    
+            <!-- Add Jackson for some annotations like @PostConstruct -->
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
+            </dependency>
+    
+        </dependencies>
+    
+        <!-- Add support for Maven WAR Plugin -->
+    
+        <build>
+            <finalName>springrest</finalName>
+            <pluginManagement>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+            </pluginManagement>
+        </build>
+    </project>
+
+Agora edite o arquivo `EstudanteRestController.java`...
+
+    package dominio.spring.rest;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.annotation.PostConstruct;
+    
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.spring.entity.Estudante;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EstudanteRestController {
+        
+        private List<Estudante> estudantes;
+        
+        // Define @PostConstruct para carregar os dados dos estudantes apenas uma vez, apenas um refatoramento do código para deixar as coisas mais simples
+        @PostConstruct
+        public void carregarDados() {
+            
+            estudantes = new ArrayList<>();
+            
+            estudantes.add(new Estudante("Júnior", "Galvão"));
+            estudantes.add(new Estudante("Virgínia", "Araújo"));
+            estudantes.add(new Estudante("Gleize", "Smith"));
+            estudantes.add(new Estudante("Rui", "Tavares"));
+        }
+        
+        // Define endpoint para /estudantes
+        @GetMapping("/estudantes")
+        public List<Estudante> getEstudantes() {
+            
+            return estudantes;
+        }
+    
+        // Define endpoint para /estudantes/id
+        @GetMapping("/estudantes/{estudanteId}")
+        public Estudante getEstudante(@PathVariable int estudanteId) {
+            
+            return estudantes.get(estudanteId);
+        }
+    }
+
+...e você já pode rodar o aplicativo como servidor. Saiba que o Id começa em 0, portanto `api/estudantes/2`, por exemplo, te levará para a estudante Gleize.
+
+## Exception Handling<span id="springrest_exceptionhandling"></span>
+
+O que acontece se eu tentar acessar um id de estudante que não existe? Dará erro 400 ou 500 a depender do que você inserir lá.
+
+Crie novas classes no pacote `dominio.spring.rest`:
+
+**EstudanteErrorResponse.java**
+
+    package dominio.spring.rest;
+    
+    public class EstudanteErrorResponse {
+        
+        private int status;
+        private String message;
+        private long timeStamp;
+        
+        public EstudanteErrorResponse () {
+            
+        }
+    
+        public EstudanteErrorResponse(int status, String message, long timeStamp) {
+            this.status = status;
+            this.message = message;
+            this.timeStamp = timeStamp;
+        }
+    
+        public int getStatus() {
+            return status;
+        }
+    
+        public void setStatus(int status) {
+            this.status = status;
+        }
+    
+        public String getMessage() {
+            return message;
+        }
+    
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    
+        public long getTimeStamp() {
+            return timeStamp;
+        }
+    
+        public void setTimeStamp(long timeStamp) {
+            this.timeStamp = timeStamp;
+        }
+    }
+
+**EstudanteNotFoundException.java**
+
+Para facilitar a construção dessa classe, você teria clicado com o botão direito do mouse sobre a tela de edição => `Source` => `Generate Constructors from Superclass`, você escolherá apenas 3, como você pode ver no código abaixo:
+
+    package dominio.spring.rest;
+    
+    public class EstudanteNotFoundException extends RuntimeException {
+    
+        private static final long serialVersionUID = 1L;
+    
+        public EstudanteNotFoundException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    
+        public EstudanteNotFoundException(String message) {
+            super(message);
+        }
+    
+        public EstudanteNotFoundException(Throwable cause) {
+            super(cause);
+        }
+    
+    }
+
+E edite o arquivo abaixo:
+
+**EstudanteRestController.java**
+
+    package dominio.spring.rest;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.annotation.PostConstruct;
+    
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.spring.entity.Estudante;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EstudanteRestController {
+        
+        private List<Estudante> estudantes;
+        
+        // Define @PostConstruct para carregar os dados dos estudantes apenas uma vez, apenas um refatoramento do código para deixar as coisas mais simples
+        @PostConstruct
+        public void carregarDados() {
+            
+            estudantes = new ArrayList<>();
+            
+            estudantes.add(new Estudante("Júnior", "Galvão"));
+            estudantes.add(new Estudante("Virgínia", "Araújo"));
+            estudantes.add(new Estudante("Gleize", "Smith"));
+            estudantes.add(new Estudante("Rui", "Tavares"));
+        }
+        
+        // Define endpoint para /estudantes
+        @GetMapping("/estudantes")
+        public List<Estudante> getEstudantes() {
+            
+            return estudantes;
+        }
+    
+        // Define endpoint para /estudantes/{estudanteId}
+        @GetMapping("/estudantes/{estudanteId}")
+        public Estudante getEstudante(@PathVariable int estudanteId) {
+            
+            if ((estudanteId >= estudantes.size()) || (estudanteId < 0)) {
+                throw new EstudanteNotFoundException("ID de estudante não encontrado - " + estudanteId);
+            }
+            
+            return estudantes.get(estudanteId);
+        }
+        
+        // Adiciona um gerenciador de exceções
+        @ExceptionHandler
+        public ResponseEntity<EstudanteErrorResponse> handleException(EstudanteNotFoundException e) {
+            
+            EstudanteErrorResponse error = new EstudanteErrorResponse();
+            
+            error.setStatus(HttpStatus.NOT_FOUND.value());
+            error.setMessage(e.getMessage());
+            error.setTimeStamp(System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+    }
+
+Agora, quando você for acessar um ID cujo número não esteja dentro do limite de IDs disponíveis, você receberá um JSON com a mensagem de erro.
+
+`ResponseEntity` é uma extensão de `HttpEntity`. `HttpEntity` representa um HTTP *request* ou *response* que contém *headers* e *body*, o `ResponseEntity` adiciona *status code*.
+
+Mas nosso código tem um problema, se adicionarmos uma letra em vez de número no lugar do ID, teremos um erro 400.
+
+    package dominio.spring.rest;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.annotation.PostConstruct;
+    
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.spring.entity.Estudante;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EstudanteRestController {
+        
+        private List<Estudante> estudantes;
+        
+        // Define @PostConstruct para carregar os dados dos estudantes apenas uma vez, apenas um refatoramento do código para deixar as coisas mais simples
+        @PostConstruct
+        public void carregarDados() {
+            
+            estudantes = new ArrayList<>();
+            
+            estudantes.add(new Estudante("Júnior", "Galvão"));
+            estudantes.add(new Estudante("Virgínia", "Araújo"));
+            estudantes.add(new Estudante("Gleize", "Smith"));
+            estudantes.add(new Estudante("Rui", "Tavares"));
+        }
+        
+        // Define endpoint para /estudantes
+        @GetMapping("/estudantes")
+        public List<Estudante> getEstudantes() {
+            
+            return estudantes;
+        }
+    
+        // Define endpoint para /estudantes/{estudanteId}
+        @GetMapping("/estudantes/{estudanteId}")
+        public Estudante getEstudante(@PathVariable int estudanteId) {
+            
+            if ((estudanteId >= estudantes.size()) || (estudanteId < 0)) {
+                throw new EstudanteNotFoundException("ID de estudante não encontrado - " + estudanteId);
+            }
+            
+            return estudantes.get(estudanteId);
+        }
+        
+        // Adiciona um gerenciador de exceções
+        @ExceptionHandler
+        public ResponseEntity<EstudanteErrorResponse> handleException(EstudanteNotFoundException e) {
+            
+            EstudanteErrorResponse error = new EstudanteErrorResponse();
+            
+            error.setStatus(HttpStatus.NOT_FOUND.value());
+            error.setMessage(e.getMessage());
+            error.setTimeStamp(System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+        
+     // Adiciona outro gerenciador de exceções que pega QUALQUER exceção
+        @ExceptionHandler
+        public ResponseEntity<EstudanteErrorResponse> handleException(Exception e) {
+            
+            EstudanteErrorResponse error = new EstudanteErrorResponse();
+            
+            error.setStatus(HttpStatus.BAD_REQUEST.value());
+            error.setMessage(e.getMessage());
+            error.setTimeStamp(System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+Uma coisa que precisa sr dita é que esse gerenciamento de exceções serve apenas para um REST controller em específico, não dá para reutilizar em outros controllers (que são muitos em projetos grandes). Para resolver isso podemos utilizar gerenciadores de exceções globais.
+
+Crie uma nova classe no pacote `dominio.spring.rest`:
+
+**EstudanteRestExceptionHandler.java**
+
+    package dominio.spring.rest;
+    
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    
+    @ControllerAdvice
+    public class EstudanteRestExceptionHandler {
+        
+     // Adiciona um gerenciador de exceções
+        @ExceptionHandler
+        public ResponseEntity<EstudanteErrorResponse> handleException(EstudanteNotFoundException e) {
+            
+            EstudanteErrorResponse error = new EstudanteErrorResponse();
+            
+            error.setStatus(HttpStatus.NOT_FOUND.value());
+            error.setMessage(e.getMessage());
+            error.setTimeStamp(System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+        
+     // Adiciona outro gerenciador de exceções que pega QUALQUER exceção
+        @ExceptionHandler
+        public ResponseEntity<EstudanteErrorResponse> handleException(Exception e) {
+            
+            EstudanteErrorResponse error = new EstudanteErrorResponse();
+            
+            error.setStatus(HttpStatus.BAD_REQUEST.value());
+            error.setMessage(e.getMessage());
+            error.setTimeStamp(System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+    
+    }
+
+Repare que ele tem os métodos que lidam com as exceções, isso signica que essesmétodos não são mais necessários no controller:
+
+**EstudanteRestController.java**
+
+    package dominio.spring.rest;
+    
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    import javax.annotation.PostConstruct;
+    
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.spring.entity.Estudante;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EstudanteRestController {
+        
+        private List<Estudante> estudantes;
+        
+        // Define @PostConstruct para carregar os dados dos estudantes apenas uma vez, apenas um refatoramento do código para deixar as coisas mais simples
+        @PostConstruct
+        public void carregarDados() {
+            
+            estudantes = new ArrayList<>();
+            
+            estudantes.add(new Estudante("Júnior", "Galvão"));
+            estudantes.add(new Estudante("Virgínia", "Araújo"));
+            estudantes.add(new Estudante("Gleize", "Smith"));
+            estudantes.add(new Estudante("Rui", "Tavares"));
+        }
+        
+        // Define endpoint para /estudantes
+        @GetMapping("/estudantes")
+        public List<Estudante> getEstudantes() {
+            
+            return estudantes;
+        }
+    
+        // Define endpoint para /estudantes/{estudanteId}
+        @GetMapping("/estudantes/{estudanteId}")
+        public Estudante getEstudante(@PathVariable int estudanteId) {
+            
+            if ((estudanteId >= estudantes.size()) || (estudanteId < 0)) {
+                throw new EstudanteNotFoundException("ID de estudante não encontrado - " + estudanteId);
+            }
+            
+            return estudantes.get(estudanteId);
+        }
+    
+    }
+
+## CRUD<span id="springrest_crud"></span>
+
+Teremos o seguinte esquema no nosso projeto:
+
+| Método HTTP | Caminho                  | CRUD                          |
+| ----------- | ------------------------ | ----------------------------- |
+| POST        | api/clientes             | Cria um novo cliente          |
+| GET         | api/clientes             | Lê uma lista de clientes      |
+| GET         | api/clientes/{clienteId} | Lê um único cliente           |
+| PUT         | api/clientes             | Atualiza um cliente existente |
+| DELETE      | api/clientes/{clienteId} | Deleta um cliente existente   |
+
+É má prática usar caminhos como `api/deletarcliente` ou `api/criarcliente`, prefira usar os *methods*.
+
+Crie o projeto como projeto Maven. Criarei meu projeto Maven com *Group Id* como `dominio` e *Artefact Id* como `springmvchb`.
+
+Vamos ao banco de dados, use o seguinte comando:
+
+    CREATE DATABASE IF NOT EXISTS `cliente_web`;
+    USE `cliente_web`;
+    
+    DROP TABLE IF EXISTS `cliente`;
+    CREATE TABLE `cliente` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+    
+    LOCK TABLES `cliente` WRITE;
+    
+    INSERT INTO `cliente` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+    
+    UNLOCK TABLES;
+
+Agora vejamos nosso arquivo `pom.xml`:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springmvchb</artifactId>
+        <version>1.0.0</version>
+        <packaging>war</packaging>
+    
+        <properties>
+            <springframework.version>5.3.20</springframework.version>
+            <hibernate.version>5.6.9.Final</hibernate.version>
+            <mysql.connector.version>8.0.29</mysql.connector.version>
+            <c3p0.version>0.9.5.5</c3p0.version>
+    
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Spring Framework -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-tx</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-orm</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.connector.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>com.mchange</groupId>
+                <artifactId>c3p0</artifactId>
+                <version>${c3p0.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+    
+            <!-- to compensate for java 9+ not including jaxb -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.0</version>
+            </dependency>
+    
+        </dependencies>
+    
+        <!-- Add support for Maven WAR Plugin -->
+        <build>
+            <finalName>springmvchb</finalName>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+        </build>
+    </project>
+
+`spring-webmvc` inclui suporte ao REST, `spring-tx` (Spring Transaction) porque usaremos o Hibernate no plano de fundo, `spring-orm` contém classes que dão suporte para utilizar Hibernate, `jackson-databind` para converter POJO em JSON, `hibernate-core` que é nossa ferramenta ORM e armazenar dados no banco de dados, `mysql-connector-java`, a implementação do banco de dados, `c3p0` para fazer a conexão com o *polling* que gerencia a conexão com o banco de dados pra gente, `javax.servlet-api` que Spring MVC usará no plano de fundo, `javax.servlet.jsp-api` porque usaremos algumas páginas JSP,`jstl`
+
+Na pasta `src/main/resources`, crie o arquivo abaixo:
+
+**persistence-mysql.properties**
+
+    #
+    # JDBC connection properties
+    #
+    jdbc.driver=com.mysql.cj.jdbc.Driver
+    jdbc.url=jdbc:mysql://localhost:3306/cliente_web?useSSL=false&serverTimezone=UTC
+    jdbc.user=estudante
+    jdbc.password=estudante
+    
+    #
+    # Connection pool properties
+    #
+    connection.pool.initialPoolSize=5
+    connection.pool.minPoolSize=5
+    connection.pool.maxPoolSize=20
+    connection.pool.maxIdleTime=3000
+    
+    #
+    # Hibernate properties
+    #
+    hibernate.dialect=org.hibernate.dialect.MySQLDialect
+    hibernate.show_sql=true
+    hibernate.packagesToScan=dominio.springmvchb.entity
+
+*A propósito, tenha certeza que o banco de dados MySQL foi incializado...*
+
+Crie os seguintes pacotes:
+
+* `dominio.springmvchb.config`
+
+* `dominio.springmvchb.dao`
+
+* `dominio.springmvchb.entity`
+
+* `dominio.springmvchb.service`
+
+* `dominio.springmvchb.rest`
+
+No pacote `dominio.springmvchb.config`, crie os arquivos:
+
+**AppConfig.java**
+
+    package dominio.springmvchb.config;
+    
+    import java.beans.PropertyVetoException;
+    import java.util.Properties;
+    import java.util.logging.Logger;
+    
+    import javax.sql.DataSource;
+    
+    import org.hibernate.SessionFactory;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.ComponentScan;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.PropertySource;
+    import org.springframework.core.env.Environment;
+    import org.springframework.orm.hibernate5.HibernateTransactionManager;
+    import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+    import org.springframework.transaction.annotation.EnableTransactionManagement;
+    import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+    import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+    
+    import com.mchange.v2.c3p0.ComboPooledDataSource;
+    
+    @Configuration
+    @EnableWebMvc
+    @EnableTransactionManagement
+    @ComponentScan(basePackages="dominio.springmvchb")
+    @PropertySource("classpath:persistence-mysql.properties")
+    public class AppConfig implements WebMvcConfigurer {
+        
+        @Autowired
+        private Environment env;
+        
+        private Logger logger = Logger.getLogger(getClass().getName());
+        
+    
+        @Bean
+        public DataSource myDataSource() {
+            
+            ComboPooledDataSource myDataSource = new ComboPooledDataSource();
+    
+            try {
+                myDataSource.setDriverClass(env.getProperty("jdbc.driver"));       
+            }
+            catch (PropertyVetoException exc) {
+                throw new RuntimeException(exc);
+            }
+            
+            logger.info(">> jdbc.url=" + env.getProperty("jdbc.url"));
+            logger.info(">> jdbc.user=" + env.getProperty("jdbc.user"));
+            
+            myDataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+            myDataSource.setUser(env.getProperty("jdbc.user"));
+            myDataSource.setPassword(env.getProperty("jdbc.password"));
+            
+            myDataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
+            myDataSource.setMinPoolSize(getIntProperty("connection.pool.minPoolSize"));
+            myDataSource.setMaxPoolSize(getIntProperty("connection.pool.maxPoolSize"));     
+            myDataSource.setMaxIdleTime(getIntProperty("connection.pool.maxIdleTime"));
+    
+            return myDataSource;
+        }
+        
+        private Properties getHibernateProperties() {
+    
+            // set hibernate properties
+            Properties props = new Properties();
+    
+            props.setProperty("hibernate.dialect", env.getProperty("hibernate.dialect"));
+            props.setProperty("hibernate.show_sql", env.getProperty("hibernate.show_sql"));
+            
+            return props;
+        }
+    
+        
+        private int getIntProperty(String propName) {
+            
+            String propVal = env.getProperty(propName);
+            
+            int intPropVal = Integer.parseInt(propVal);
+            
+            return intPropVal;
+        }   
+        
+        @Bean
+        public LocalSessionFactoryBean sessionFactory(){
+            
+            LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+            
+            sessionFactory.setDataSource(myDataSource());
+            sessionFactory.setPackagesToScan(env.getProperty("hibernate.packagesToScan"));
+            sessionFactory.setHibernateProperties(getHibernateProperties());
+            
+            return sessionFactory;
+        }
+        
+        @Bean
+        @Autowired
+        public HibernateTransactionManager transactionManager(SessionFactory sessionFactory) {
+            
+            // setup transaction manager based on session factory
+            HibernateTransactionManager txManager = new HibernateTransactionManager();
+            txManager.setSessionFactory(sessionFactory);
+    
+            return txManager;
+        }
+    }
+
+**MeuSpringMvcDispatcherServletInitializer.java**
+
+    package dominio.springmvchb.config;
+    
+    import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+    
+    public class MeuSpringMvcDispatcherServletInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+    
+        @Override
+        protected Class<?>[] getRootConfigClasses() { // Não teremos arquivos de configuração root no nosso projeto
+            // TODO Auto-generated method stub
+            return null;
+        }
+    
+        @Override
+        protected Class<?>[] getServletConfigClasses() {
+    
+            return new Class[] {AppConfig.class};
+        }
+    
+        @Override
+        protected String[] getServletMappings() {
+    
+            return new String[] { "/" };
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.dao`, crie os arquivos:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void saveCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deleteCliente(int oId);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+                
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session currentSession = sessionFactory.getCurrentSession();
+                    
+            Query<Cliente> theQuery = currentSession.createQuery("from Cliente order by nome", Cliente.class);
+            
+            // execute query and get result list
+            List<Cliente> clientes = theQuery.getResultList();
+                    
+            // return the results
+            return clientes;
+        }
+    
+        @Override
+        public void saveCliente(Cliente oCliente) {
+    
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            currentSession.saveOrUpdate(oCliente);
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+    
+            // get the current hibernate session
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            // now retrieve/read from database using the primary key
+            Cliente oCliente = currentSession.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deleteCliente(int oId) {
+    
+            // get the current hibernate session
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            // delete object with primary key
+            Query theQuery = currentSession.createQuery("delete from Cliente where id=:clienteId");
+            theQuery.setParameter("clienteId", oId);
+            
+            theQuery.executeUpdate();       
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.entity`, crie os arquivos:
+
+**Cliente.java**
+
+    package dominio.springmvchb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="cliente")
+    public class Cliente {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        public int id;
+        
+        @Column(name="nome")
+        public String nome;
+        
+        @Column(name="sobrenome")
+        public String sobrenome;
+        
+        @Column(name="email")
+        public String email;
+        
+        public Cliente () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Cliente [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.service`, crie os arquivos:
+
+**ClienteService.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteService {
+        
+        public List<Cliente> getClientes();
+        
+        public void saveCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deleteCliente(int oId);
+    
+    }
+
+**ClienteServiceImpl.java**
+
+    package dominio.springmvchb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.springmvchb.dao.ClienteDAO;
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Service
+    public class ClienteServiceImpl implements ClienteService {
+        
+        @Autowired
+        private ClienteDAO clienteDAO;
+    
+        @Override
+        @Transactional
+        public List<Cliente> getClientes() {
+            return clienteDAO.getClientes();
+        }
+    
+        @Override
+        @Transactional
+        public void saveCliente(Cliente oCliente) {
+            clienteDAO.saveCliente(oCliente);        
+        }
+    
+        @Override
+        @Transactional
+        public Cliente getCliente(int oId) {
+            return clienteDAO.getCliente(oId);
+        }
+    
+        @Override
+        @Transactional
+        public void deleteCliente(int oId) {
+            clienteDAO.deleteCliente(oId);  
+            
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.rest`, crie o arquivo:
+
+**ClienteRestController.java**
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+    
+    }
+
+Na pasta `src/main/webapp`, crie o arquivo `index.jsp`:
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Página inicial - REST</title>
+    </head>
+    <body>
+    
+        <p>Páginas JSP não são necessárias para REST, isto aqui é apenas para conveniência</p>
+        
+        <br>
+        
+        <ul>
+            <li><a href="${pageContext.request.contextPath}/api/clientes">api/clientes</a></li>
+        </ul>
+    
+    </body>
+    </html>
+
+### Leitura de um único cliente<span id="springrest_crud_r1"></span>
+
+Simplesmente edite o arquivo `ClienteRestController.java`:
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            return oCliente;
+        }
+    
+    }
+
+### Exception Handling<span id="springrest_crud_exceptionhandling"></span>
+
+No pacote `dominio.springmvchb.rest`, crie o arquivo:
+
+**ClienteErrorResponse.java**
+
+    package dominio.springmvchb.rest;
+    
+    public class ClienteErrorResponse {
+        
+        private int status;
+        private String message;
+        private long timeStamp;
+        
+        public ClienteErrorResponse () {
+            
+        }
+    
+        public ClienteErrorResponse(int status, String message, long timeStamp) {
+            this.status = status;
+            this.message = message;
+            this.timeStamp = timeStamp;
+        }
+    
+        public int getStatus() {
+            return status;
+        }
+    
+        public void setStatus(int status) {
+            this.status = status;
+        }
+    
+        public String getMessage() {
+            return message;
+        }
+    
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    
+        public long getTimeStamp() {
+            return timeStamp;
+        }
+    
+        public void setTimeStamp(long timeStamp) {
+            this.timeStamp = timeStamp;
+        }
+        
+    }
+
+Comece a criar a classe chamada `ClienteNotFoundException`, em *Superclass* procure por `RuntimeException` e marque a opção `Constructors from superclass`
+
+    package dominio.springmvchb.rest;
+    
+    public class ClienteNotFoundException extends RuntimeException {
+    
+        private static final long serialVersionUID = 1L;
+    
+        public ClienteNotFoundException() {
+            
+        }
+    
+        public ClienteNotFoundException(String message) {
+            super(message);
+        }
+    
+        public ClienteNotFoundException(Throwable cause) {
+            super(cause);
+        }
+    
+        public ClienteNotFoundException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    
+        public ClienteNotFoundException(String message, Throwable cause, boolean enableSuppression,
+                boolean writableStackTrace) {
+            super(message, cause, enableSuppression, writableStackTrace);
+        }
+    
+    }
+
+Atualize o controller `ClienteRestController`:
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            if (oCliente == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            return oCliente;
+        }
+    
+    }
+
+Crie o nosso exception handler chamado `ClienteRestExceptionHandler`:
+
+    package dominio.springmvchb.rest;
+    
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    
+    @ControllerAdvice
+    public class ClienteRestExceptionHandler {
+    
+        @ExceptionHandler
+        public ResponseEntity<ClienteErrorResponse> handleException(ClienteNotFoundException exc) {
+            
+            ClienteErrorResponse error = new ClienteErrorResponse(
+                    HttpStatus.NOT_FOUND.value(),
+                    exc.getMessage(),
+                    System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+        
+        @ExceptionHandler
+        public ResponseEntity<ClienteErrorResponse> handleException(Exception exc) {
+            
+            ClienteErrorResponse error = new ClienteErrorResponse(
+                    HttpStatus.BAD_REQUEST.value(),
+                    exc.getMessage(),
+                    System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+        
+    }
+
+### Adição de um cliente<span id="springrest_crud_c"></span>
+
+Atualize o arquivo `ClienteRestController.java`:
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            if (oCliente == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            return oCliente;
+        }
+        
+        @PostMapping("/clientes")
+        public Cliente addCliente(@RequestBody Cliente oCliente) {
+            
+            oCliente.setId(0); // Deixei um comentário explicando porque o ID foi definido como 0
+            
+            clienteService.saveCliente(oCliente); // Usamos @RequestBody para acessar o request body como um POJO
+            
+            return oCliente;
+            
+        }
+    
+    }
+
+A *annotation* `@RequestBody` vincula o POJO ao parâmetro do método. No controller REST, explicitamente definimos o ID do cliente como 0 porque o DAO no backend usa o método Hibernate `session.saveOrUpdate(..)`, se a *primary key* está *empty* (*null* ou 0), o sistema INSERT um novo cliente, caso contrário UPDATE um cliente existente.
+
+Agora você já pode testar, basta rodar o aplicativo como servidor e abrir o POstman para realizar a operação de POST. Selecione POST, ponha a URL com `api/clientes`, clique na aba *body*, selecione *raw*, na mesma barra escolha *JSON* (o padrão será *Text*). O conteúdo será:
+
+    {
+        "nome" : "Juliana",
+        "sobrenome" : "Couto",
+        "email" : "ju@gmail.com"
+    }
+
+Clique no botão *Send*. Se tudo deu xerto, repare que até o banco de dados MySQL foi atualizado.
+
+### Atualização de um cliente<span id="springrest_crud_u"></span>
+
+Atualize o arquivo `ClienteRestController.java`:
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.PutMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            if (oCliente == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            return oCliente;
+        }
+        
+        @PostMapping("/clientes")
+        public Cliente addCliente(@RequestBody Cliente oCliente) {
+            
+            oCliente.setId(0);
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+        
+        @PutMapping("/clientes")
+        public Cliente updateCliente(@RequestBody Cliente oCliente) {
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+    
+    }
+
+No Postman, você usará o PUT agora. Do resto você repetirá o mesmo procedimento. Vamos dizer que quero editar o cliente cujo ID é 1:
+
+    {
+        "id" : 1,
+        "nome" : "Hugo",
+        "sobrenome" : "Castro",
+        "email" : "hugo@gmail.com"
+    }
+
+### Deleção de um cliente<span id="springrest_crud_d"></span>
+
+Atualize o arquivo `ClienteRestController.java`:
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.DeleteMapping;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.PutMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            if (oCliente == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            return oCliente;
+        }
+        
+        @PostMapping("/clientes")
+        public Cliente addCliente(@RequestBody Cliente oCliente) {
+            
+            oCliente.setId(0);
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+        
+        @PutMapping("/clientes")
+        public Cliente updateCliente(@RequestBody Cliente oCliente) {
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+        
+        @DeleteMapping("/clientes/{clienteId}")
+        public String deleteCliente(@PathVariable int clienteId) {
+            
+            Cliente clienteTemp = clienteService.getCliente(clienteId);
+            
+            if (clienteTemp == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            clienteService.deleteCliente(clienteId);
+            
+            return "Foi deletado o cliente cujo ID é " + clienteId;
+            
+        }
+    
+    }
+
+Nesta vez será diferente no Postman, escolha a opção DELETE e apenas envie o link com a ID do cliente que você quer deletar, por exemplo [http://localhost:8080/springmvchb/api/clientes/2](http://localhost:8080/springmvchb/api/clientes/2).
+
+## BÔNUS: O projeto final<span id="springrest_final"></span>
+
+Crie o projeto como projeto Maven. Criarei meu projeto Maven com *Group Id* como `dominio` e *Artefact Id* como `springmvchb`.
+
+Vamos ao banco de dados, use o seguinte comando:
+
+Se você ainda não tiver o usuário `estudante`
+
+    CREATE USER 'estudante'@'localhost' IDENTIFIED BY 'estudante';
+    GRANT ALL PRIVILEGES ON * .* TO 'estudante'@'localhost';
+
+O comando de fato:
+
+    CREATE DATABASE IF NOT EXISTS `cliente_web`;
+    USE `cliente_web`;
+    
+    DROP TABLE IF EXISTS `cliente`;
+    CREATE TABLE `cliente` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+    
+    LOCK TABLES `cliente` WRITE;
+    
+    INSERT INTO `cliente` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+    
+    UNLOCK TABLES;
+
+Agora vejamos nosso arquivo `pom.xml`:
+
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>dominio</groupId>
+        <artifactId>springmvchb</artifactId>
+        <version>1.0.0</version>
+        <packaging>war</packaging>
+    
+        <properties>
+            <springframework.version>5.3.20</springframework.version>
+            <hibernate.version>5.6.9.Final</hibernate.version>
+            <mysql.connector.version>8.0.29</mysql.connector.version>
+            <c3p0.version>0.9.5.5</c3p0.version>
+    
+            <maven.compiler.source>17</maven.compiler.source>
+            <maven.compiler.target>17</maven.compiler.target>
+        </properties>
+    
+        <dependencies>
+    
+            <!-- Spring Framework -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-tx</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-orm</artifactId>
+                <version>${springframework.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.13.3</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.connector.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>com.mchange</groupId>
+                <artifactId>c3p0</artifactId>
+                <version>${c3p0.version}</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+    
+            <dependency>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>javax.servlet.jsp-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+    
+            <!-- to compensate for java 9+ not including jaxb -->
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.0</version>
+            </dependency>
+    
+        </dependencies>
+    
+        <!-- Add support for Maven WAR Plugin -->
+        <build>
+            <finalName>springmvchb</finalName>
+                <plugins>
+                    <!-- Add Maven coordinates for> maven-war-plugin -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>3.3.2</version>
+                    </plugin>
+                </plugins>
+        </build>
+    </project>
+
+Na pasta `src/main/resources`, crie o arquivo:
+
+**persistence-mysql.properties**
+
+    #
+    # JDBC connection properties
+    #
+    jdbc.driver=com.mysql.cj.jdbc.Driver
+    jdbc.url=jdbc:mysql://localhost:3306/cliente_web?useSSL=false&serverTimezone=UTC
+    jdbc.user=estudante
+    jdbc.password=estudante
+    
+    #
+    # Connection pool properties
+    #
+    connection.pool.initialPoolSize=5
+    connection.pool.minPoolSize=5
+    connection.pool.maxPoolSize=20
+    connection.pool.maxIdleTime=3000
+    
+    #
+    # Hibernate properties
+    #
+    hibernate.dialect=org.hibernate.dialect.MySQLDialect
+    hibernate.show_sql=true
+    hibernate.packagesToScan=dominio.springmvchb.entity
+
+Na pasta `src/main/webapp`, crie o arquivo:
+
+**index.jsp**
+
+    <%@ page language="java" contentType="text/html; charset=UTF-8"
+        pageEncoding="UTF-8"%>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Página inicial - REST</title>
+    </head>
+    <body>
+    
+        <p>Páginas JSP não são necessárias para REST, isto aqui é apenas para conveniência</p>
+        
+        <br>
+        
+        <ul>
+            <li><a href="${pageContext.request.contextPath}/api/clientes">api/clientes</a></li>
+        </ul>
+    
+    </body>
+    </html>
+
+Crie os seguintes pacotes:
+
+* `dominio.springmvchb.config`
+
+* `dominio.springmvchb.dao`
+
+* `dominio.springmvchb.entity`
+
+* `dominio.springmvchb.service`
+
+* `dominio.springmvchb.rest`
+
+No pacote `dominio.springmvchb.config`, crie os arquivos:
+
+**AppConfig.java**
+
+    package dominio.springmvchb.config;
+    
+    import java.beans.PropertyVetoException;
+    import java.util.Properties;
+    import java.util.logging.Logger;
+    
+    import javax.sql.DataSource;
+    
+    import org.hibernate.SessionFactory;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.ComponentScan;
+    import org.springframework.context.annotation.Configuration;
+    import org.springframework.context.annotation.PropertySource;
+    import org.springframework.core.env.Environment;
+    import org.springframework.orm.hibernate5.HibernateTransactionManager;
+    import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
+    import org.springframework.transaction.annotation.EnableTransactionManagement;
+    import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+    import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+    
+    import com.mchange.v2.c3p0.ComboPooledDataSource;
+    
+    @Configuration
+    @EnableWebMvc
+    @EnableTransactionManagement
+    @ComponentScan(basePackages="dominio.springmvchb")
+    @PropertySource("classpath:persistence-mysql.properties")
+    public class AppConfig implements WebMvcConfigurer {
+        
+        @Autowired
+        private Environment env;
+        
+        private Logger logger = Logger.getLogger(getClass().getName());
+        
+    
+        @Bean
+        public DataSource myDataSource() {
+            
+            ComboPooledDataSource myDataSource = new ComboPooledDataSource();
+    
+            try {
+                myDataSource.setDriverClass(env.getProperty("jdbc.driver"));       
+            }
+            catch (PropertyVetoException exc) {
+                throw new RuntimeException(exc);
+            }
+            
+            logger.info(">> jdbc.url=" + env.getProperty("jdbc.url"));
+            logger.info(">> jdbc.user=" + env.getProperty("jdbc.user"));
+            
+            myDataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+            myDataSource.setUser(env.getProperty("jdbc.user"));
+            myDataSource.setPassword(env.getProperty("jdbc.password"));
+            
+            myDataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
+            myDataSource.setMinPoolSize(getIntProperty("connection.pool.minPoolSize"));
+            myDataSource.setMaxPoolSize(getIntProperty("connection.pool.maxPoolSize"));     
+            myDataSource.setMaxIdleTime(getIntProperty("connection.pool.maxIdleTime"));
+    
+            return myDataSource;
+        }
+        
+        private Properties getHibernateProperties() {
+    
+            // set hibernate properties
+            Properties props = new Properties();
+    
+            props.setProperty("hibernate.dialect", env.getProperty("hibernate.dialect"));
+            props.setProperty("hibernate.show_sql", env.getProperty("hibernate.show_sql"));
+            
+            return props;
+        }
+    
+        
+        private int getIntProperty(String propName) {
+            
+            String propVal = env.getProperty(propName);
+            
+            int intPropVal = Integer.parseInt(propVal);
+            
+            return intPropVal;
+        }   
+        
+        @Bean
+        public LocalSessionFactoryBean sessionFactory(){
+            
+            LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+            
+            sessionFactory.setDataSource(myDataSource());
+            sessionFactory.setPackagesToScan(env.getProperty("hibernate.packagesToScan"));
+            sessionFactory.setHibernateProperties(getHibernateProperties());
+            
+            return sessionFactory;
+        }
+        
+        @Bean
+        @Autowired
+        public HibernateTransactionManager transactionManager(SessionFactory sessionFactory) {
+            
+            // setup transaction manager based on session factory
+            HibernateTransactionManager txManager = new HibernateTransactionManager();
+            txManager.setSessionFactory(sessionFactory);
+    
+            return txManager;
+        }
+    }
+
+**MeuSpringMvcDispatcherServletInitializer.java**
+
+    package dominio.springmvchb.config;
+    
+    import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+    
+    public class MeuSpringMvcDispatcherServletInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+    
+        @Override
+        protected Class<?>[] getRootConfigClasses() { // Não teremos arquivos de configuração root no nosso projeto
+            // TODO Auto-generated method stub
+            return null;
+        }
+    
+        @Override
+        protected Class<?>[] getServletConfigClasses() {
+    
+            return new Class[] {AppConfig.class};
+        }
+    
+        @Override
+        protected String[] getServletMappings() {
+    
+            return new String[] { "/" };
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.dao`, crie os arquivos:
+
+**ClienteDAO.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    public interface ClienteDAO {
+        
+        public List<Cliente> getClientes();
+        
+        public void saveCliente(Cliente oCliente);
+    
+        public Cliente getCliente(int oId);
+    
+        public void deleteCliente(int oId);
+    
+    }
+
+**ClienteDAOImpl.java**
+
+    package dominio.springmvchb.dao;
+    
+    import java.util.List;
+    
+    import org.hibernate.Session;
+    import org.hibernate.SessionFactory;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.springmvchb.entity.Cliente;
+    
+    @Repository
+    public class ClienteDAOImpl implements ClienteDAO {
+        
+        @Autowired
+        private SessionFactory sessionFactory;
+                
+        @Override
+        public List<Cliente> getClientes() {
+            
+            Session currentSession = sessionFactory.getCurrentSession();
+                    
+            Query<Cliente> theQuery = currentSession.createQuery("from Cliente order by nome", Cliente.class);
+            
+            // execute query and get result list
+            List<Cliente> clientes = theQuery.getResultList();
+                    
+            // return the results
+            return clientes;
+        }
+    
+        @Override
+        public void saveCliente(Cliente oCliente) {
+    
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            currentSession.saveOrUpdate(oCliente);
+            
+        }
+    
+        @Override
+        public Cliente getCliente(int oId) {
+    
+            // get the current hibernate session
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            // now retrieve/read from database using the primary key
+            Cliente oCliente = currentSession.get(Cliente.class, oId);
+            
+            return oCliente;
+        }
+    
+        @Override
+        public void deleteCliente(int oId) {
+    
+            // get the current hibernate session
+            Session currentSession = sessionFactory.getCurrentSession();
+            
+            // delete object with primary key
+            Query theQuery = currentSession.createQuery("delete from Cliente where id=:clienteId");
+            theQuery.setParameter("clienteId", oId);
+            
+            theQuery.executeUpdate();       
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.entity`, crie o arquivo:
+
+**Cliente.java**
+
+    package dominio.springmvchb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="cliente")
+    public class Cliente {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        public int id;
+        
+        @Column(name="nome")
+        public String nome;
+        
+        @Column(name="sobrenome")
+        public String sobrenome;
+        
+        @Column(name="email")
+        public String email;
+        
+        public Cliente () {
+            
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Cliente [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+No pacote `dominio.springmvchb.rest`, crie os arquivos:
+
+**ClienteRestController.java**
+
+    package dominio.springmvchb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.DeleteMapping;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.PutMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.springmvchb.entity.Cliente;
+    import dominio.springmvchb.service.ClienteService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class ClienteRestController {
+        
+        @Autowired
+        private ClienteService clienteService;
+        
+        @GetMapping("/clientes")
+        public List<Cliente> getClientes() {
+            return clienteService.getClientes();
+        }
+        
+        @GetMapping("/clientes/{clienteId}")
+        public Cliente getCliente(@PathVariable int clienteId) {
+            
+            Cliente oCliente = clienteService.getCliente(clienteId);
+            
+            if (oCliente == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            return oCliente;
+        }
+        
+        @PostMapping("/clientes")
+        public Cliente addCliente(@RequestBody Cliente oCliente) {
+            
+            oCliente.setId(0);
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+        
+        @PutMapping("/clientes")
+        public Cliente updateCliente(@RequestBody Cliente oCliente) {
+            
+            clienteService.saveCliente(oCliente);
+            
+            return oCliente;
+            
+        }
+        
+        @DeleteMapping("/clientes/{clienteId}")
+        public String deleteCliente(@PathVariable int clienteId) {
+            
+            Cliente clienteTemp = clienteService.getCliente(clienteId);
+            
+            if (clienteTemp == null) {
+                throw new ClienteNotFoundException("Cliente não encontrado - " + clienteId);
+            }
+            
+            clienteService.deleteCliente(clienteId);
+            
+            return "Foi deletado o cliente cujo ID é " + clienteId;
+            
+        }
+    
+    }
+
+**ClienteErrorResponse.java**
+
+    package dominio.springmvchb.rest;
+    
+    public class ClienteErrorResponse {
+        
+        private int status;
+        private String message;
+        private long timeStamp;
+        
+        public ClienteErrorResponse () {
+            
+        }
+    
+        public ClienteErrorResponse(int status, String message, long timeStamp) {
+            this.status = status;
+            this.message = message;
+            this.timeStamp = timeStamp;
+        }
+    
+        public int getStatus() {
+            return status;
+        }
+    
+        public void setStatus(int status) {
+            this.status = status;
+        }
+    
+        public String getMessage() {
+            return message;
+        }
+    
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    
+        public long getTimeStamp() {
+            return timeStamp;
+        }
+    
+        public void setTimeStamp(long timeStamp) {
+            this.timeStamp = timeStamp;
+        }
+        
+    }
+
+**ClienteNotFoundException.java**
+
+    package dominio.springmvchb.rest;
+    
+    public class ClienteNotFoundException extends RuntimeException {
+    
+        private static final long serialVersionUID = 1L;
+    
+        public ClienteNotFoundException() {
+            
+        }
+    
+        public ClienteNotFoundException(String message) {
+            super(message);
+        }
+    
+        public ClienteNotFoundException(Throwable cause) {
+            super(cause);
+        }
+    
+        public ClienteNotFoundException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    
+        public ClienteNotFoundException(String message, Throwable cause, boolean enableSuppression,
+                boolean writableStackTrace) {
+            super(message, cause, enableSuppression, writableStackTrace);
+        }
+    
+    }
+
+**ClienteRestExceptionHandler.java**
+
+    package dominio.springmvchb.rest;
+    
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.ControllerAdvice;
+    import org.springframework.web.bind.annotation.ExceptionHandler;
+    
+    @ControllerAdvice
+    public class ClienteRestExceptionHandler {
+    
+        @ExceptionHandler
+        public ResponseEntity<ClienteErrorResponse> handleException(ClienteNotFoundException exc) {
+            
+            ClienteErrorResponse error = new ClienteErrorResponse(
+                    HttpStatus.NOT_FOUND.value(),
+                    exc.getMessage(),
+                    System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+        }
+        
+        @ExceptionHandler
+        public ResponseEntity<ClienteErrorResponse> handleException(Exception exc) {
+            
+            ClienteErrorResponse error = new ClienteErrorResponse(
+                    HttpStatus.BAD_REQUEST.value(),
+                    exc.getMessage(),
+                    System.currentTimeMillis());
+            
+            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+        }
+        
+    }
+
+# Spring Boot<span id="springboot"></span>
+
+Finalmente chegamos no Spring Boot!!! 🎉🎉🎉
+
+
+
