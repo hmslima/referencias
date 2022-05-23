@@ -194,6 +194,36 @@
 
 * [Spring Boot](#springboot)
 
+	* [Spring Boot Initializr](#springboot_initializr)
+
+	* [Uma página inicial bem simples](#springboot_simplehome)
+
+	* [Spring Boot Dev Tools](#springboot_devtools)
+
+	* [Spring Boot Actuator](#springboot_actuator)
+
+	* [Segurança](#springboot_security)
+
+	* [Como rodar aplicativos do Spring Boot via linha de comando](#springboot_commandline)
+
+	* [Application Properties](#springboot_applicationproperties)
+
+	* [REST API com Hibernate](#springboot_resthibernate)
+
+	* [REST API com JPA](#springboot_restjpa)
+
+	* [Spring Data](#springboot_data)
+
+		* [Spring Data JPA](#springboot_data_jpa)
+
+		* [Spring Data REST](#springboot_data_rest)
+
+		* [BÔNUS: O projeto final](#springboot_data_final)
+
+* [Thymeleaf](#thymeleaf)
+
+	* [Tabelas](#thymeleaf_tables)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -6366,6 +6396,10 @@ Atualize os arquivos abaixo:
     
     }
 
+*Esse `=:` ajuda a prevenir ataques de injeção de SQL, esses dois pontos são uma "bind variable" que permitem que uma única instrução SQL seja reusada muitas vezes, o que ajuda na segurança (desautorizando ataques de injeção de SQL) e performance (reduz a quantidade de parsing exigida)*
+
+*Ah, e você provavelmente está recebendo um aviso ("Query is a raw type. References to generic type Query<R> should be parameterized") nessa mesma linha `Query oQuery = sessionAtual.createQuery("delete from Cliente where id=:clienteId");` porque um generic é recomendado para o caso de recebermos mais que 1 objeto. De qualquer forma, você não precisa se preocupar porque quando deletamos um dado, não precisamos saber o tipo de dado, simplesmente deletamos o dado através do ID.*
+
 **ClienteService.java**
 
     package dominio.springmvchb.service;
@@ -10849,6 +10883,8 @@ Dentro da pasta `src/main/resources`, crie o arquivo `persistence-mysql.properti
     connection.pool.maxPoolSize=20
     connection.pool.maxIdleTime=3000
 
+A propósito, a pasta `src/main/resources` é justamente onde você guarda os arquivos de propriedades e configurações do aplicativo.
+
 Edite o arquivo `MinhaAppConfig.java`:
 
     package dominio.springsecurity.config;
@@ -11575,7 +11611,7 @@ Dentro da pasta `webapp`, caso não exista, crie a pasta `WEB-INF` e dentro dest
 
 *<b>Re</b>presentational <b>S</b>tate <b>T</b>ransfer* (REST), ou “Transferência Representacional de Estado” em português, é um estilo de arquitetura de software que define um conjunto de restrições a serem usadas para a criação de serviços Web, é uma abordagem leve para a comunicação entre aplicações, como um aplicativo que exibe o tempo *(clima)* atual de uma cidade e consulta os dados armazenados em um servidor. 
 
-Tanto no lado do servidor quanto no do cliente, podemos utilizar qualquer linguagem de programação. Até mesmo o formato pode ser qualquer um, como XMLou JSON, sendo que este último é o mais utilizado por ser mais moderno.
+Tanto no lado do servidor quanto no do cliente, podemos utilizar qualquer linguagem de programação. Até mesmo o formato pode ser qualquer um, como XML ou JSON, sendo que este último é o mais utilizado por ser mais moderno. Em resumo, a diferença entre um aplicativo web e uma API REST é que a resposta de um aplicativo da web é uma visualização do nosso conhecido conjunto de HTML, CSS e JavaScript enquanto a API REST apenas retorna dados em forma de JSON ou XML.
 
 No nosso estudo, criaremos um aplicativo CRM que pega dados de um serviço CRM feito em Spring Rest. CRM = Customer Relationship Manager
 
@@ -12079,7 +12115,7 @@ Agora crie o pacote `dominio.spring.rest` e crie a classe `TestRestController`:
         }
     }
 
-`@RestController` é uma extensão de `@Controller`
+`@RestController` é uma extensão de `@Controller`, mais precisamente uma combinação do `@Controller` e `@ResponseBody`.
 
 Rode como servidor. Naturalmente que você terá um erro 404 porque ainda não temos uma página inicial, mas o endereço [http://localhost:8080/springrest/teste/ola](http://localhost:8080/springrest/teste/ola) funcionará. Tente abrrir esse endereço no Postman para você ver o resultado.
 
@@ -14461,5 +14497,1288 @@ No pacote `dominio.springmvchb.rest`, crie os arquivos:
 
 Finalmente chegamos no Spring Boot!!! 🎉🎉🎉
 
+Bom, não é trivial o trabalho de criar uma aplicação Spring, temos que ver qual arquétipo do Maven utilizar, quais dependências usar, que tipo de configuração *(XML ou Java)* a ser utilizada e como instalar o servidor *(Tomcat, JBoss, etc) *.
 
+Spring Boot facilita tudo minimizando a quantidade de configuração manual, nem sequer precisamos instalar um servidor separadamente, será gerado um arquivo JAR com seu código e o Tomcat. Mas você pode fazer o *deploy* como um arquivo WAR para que este seja rodade num servidor externo.
+ 
+O Spring Boot não substitui as tecnologias que estudamos até aqui, na verdade, ele as usa, dentro dele tem Spring Core, Spring AOP, Spring MVC, Spring REST, etc.
 
+Apesar do time do Spring oferecer o [Spring Tool Suite (STS)](https://spring.io/tools/), você pode desenvolver mesmo com o bloco de notas.
+
+## Spring Initializr<span id="springboot_initializr"></span>
+
+É um site *(aqui o [link](https://start.spring.io/)* que permite criar um projeto Spring rapidamente, nos permitindo selecionar as dependências, criar um projeto Maven/Gradle e importar o projeto para a IDE.
+
+*Quando você configurar seu projeto no site, escolha a última versão do Spring Boot, mas evite as marcadas como `(SNAPSHOT)` porque elas são versões alfa/beta*
+
+*Em `Dependencies`, podemos simplesmente digitar "web" que aparecerá a opção `Spring Web` que é a que queremos.*
+
+*Apenas como referência, deixei o nome do meu projeto como `demo` mesmo.*
+
+Com tudo definido, clicamos em `Download` ou `Generate`, baixamos um arquivo ZIP, extraimos o conteúdo desse arquivo e importamos o conteúdo como um projeto Maven/Gradle.
+
+No Eclipse: `File` => `Import` => `Existing Maven Projects` => Selecione a pasta que você descompactou do récem baixado arquivo ZIP
+
+Espere um pouquinho para o Maven baixar as dependências. Pode demorar um bocadinho...
+
+Quando tudo estiver carregado, **rode o arquivo java com o método main como Java Application**, não precisa ser mais como servidor porque o Sprign Boot já inclui seu próprio servidor. Outra coisa que não sei se você prestou atenção, **é para rodar o arquivo .java, não a pasta do projeto**!!!
+
+Você pode ir até o endereço [http://localhost:8080/](http://localhost:8080/) ver  que o servidor está funcionando.
+
+Vamos ver como ficou o `pom.xml` gerado no projeto:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    	<modelVersion>4.0.0</modelVersion>
+    	<parent>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-parent</artifactId>
+    		<version>3.0.0-M3</version>
+    		<relativePath/> <!-- lookup parent from repository -->
+    	</parent>
+    	<groupId>dominio</groupId>
+    	<artifactId>demo</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    	<name>demo</name>
+    	<description>Demo project for Spring Boot</description>
+    	<properties>
+    		<java.version>17</java.version>
+    	</properties>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-web</artifactId>
+    		</dependency>
+    
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-test</artifactId>
+    			<scope>test</scope>
+    		</dependency>
+    	</dependencies>
+    
+    	<build>
+    		<plugins>
+    			<plugin>
+    				<groupId>org.springframework.boot</groupId>
+    				<artifactId>spring-boot-maven-plugin</artifactId>
+    			</plugin>
+    		</plugins>
+    	</build>
+    	<repositories>
+    		<repository>
+    			<id>spring-milestones</id>
+    			<name>Spring Milestones</name>
+    			<url>https://repo.spring.io/milestone</url>
+    			<snapshots>
+    				<enabled>false</enabled>
+    			</snapshots>
+    		</repository>
+    	</repositories>
+    	<pluginRepositories>
+    		<pluginRepository>
+    			<id>spring-milestones</id>
+    			<name>Spring Milestones</name>
+    			<url>https://repo.spring.io/milestone</url>
+    			<snapshots>
+    				<enabled>false</enabled>
+    			</snapshots>
+    		</pluginRepository>
+    	</pluginRepositories>
+    
+    </project>
+
+*<span style="color: red;">Cometi um vacilo e baixei a versão (M3), essa não é a versão que eu deveria ter baixado, mas tudo bem...</span>*
+
+Vamos ver essas dependências.`spring-boot-starter-web` é uma coleção de dependências do Maven que são compatíveis, contém: spring-web, spring-webmvc, hibernate-validator, json, tomcat, etc. Vejamos o que tem nos principais Spring Boot Starters:
+
+| Nome                    | Descrição                                |
+| ----------------------- | ---------------------------------------- |
+| spring-boot-starter-web | Criação de aplicativos web, inclui validação e REST; usa Tomcat como servidor padrão |
+| spring-boot-starter-security | Adiciona suporte ao Spring Security |
+| spring-boot-starter-data-jpa | Adiciona suporte ao JPA e Hibernate |
+
+Você pode ver mais [aqui](https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#using.build-systems.starters).
+
+Se você quiser ver as dependências com detalhes, no Eclipse, abra o arquivo `pom.xml` e clique na aba *Dependency Hierarchy*
+
+A propósito, o `spring-boot-starter-parent` define a versão do Spring Boot, por isso que o resto das dependências não tem versão, porque isso já foi definido pela versão do Spring Boot selecionada.
+
+E o Spring Boot criou um pacote `dominio.demo` com a classe principal `DemoApplication.java` *(que tem esse nome porque deixei no padrão, se você tivesse gerado seu projeto com o nome "Meuprograma", o nome completo do arquivo seria `dominio.meuprograma.MeuprogramaApplication`)*
+
+    package dominio.demo;
+    
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    
+    @SpringBootApplication
+    public class DemoApplication {
+    
+    	public static void main(String[] args) {
+    		SpringApplication.run(DemoApplication.class, args);
+    	}
+    
+    }
+
+A *annotation* `@SpringBootApplication` habilita auto-configuração (`@EnableAutoConfiguration`), escaneamento de componentes (`@ComponentScan`) e configurações adicionais (`@Configuration`). O Spring Boot automaticamente escaneia subpacotes, mas para escanear pacotes em outros lugares você precisa declará-los explicitamente.
+
+Também temos outras novidades, que são os arquivos `mvnw` (`mvnw` e `mvnw.cmd`): `mvnw` é pra Linux ou Mac e `mvnw.cmd` é pra Windows, ele serve para baixar a versão correta do Maven caso você não tenha esta instalada.  Esses arquivos são desnecessários se você já tiver o Maven instalado no seu computador.
+
+Isso aqui é importante: Nunca use a pasta `src/main/webapp` se a aplicação for empacotada em JAR, porque isso só funciona no empacotamento WAR.
+
+## Uma página inicial bem simples<span id="springboot_simplehome"></span>
+
+Crie o pacote `dominio.demo.rest` *(é a última vez que falo isso, estou assumindo aqui que o nome do seu projeto é `demo`, se for diferente vá adaptando os códigos que eu for lhe passando)*. Neste pacote, crie a seguinte classe:
+
+**AppRestController.java**
+
+    package dominio.demo.rest;
+    
+    import java.time.LocalDateTime;
+    
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    @RestController
+    public class AppRestController {
+        
+        @GetMapping("/")
+        public String olaMundo() {
+            return "Olá Mundo! Hora no servidor é " + LocalDateTime.now();
+        }
+    
+    }
+
+## Spring Boot Dev Tools<span id="springboot_devtools"></span>
+
+Quando editamos algo no código de um projeto feito com Spring Boot, temos que reiniciar a aplicação manualmente. Para deixar as coisas mais automáticas é usar  `spring-boot-devtools`:
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-devtools</artifactId>
+    </dependency>
+
+## Spring Boot Actuator<span id="springboot_actuator"></span>
+
+Para monitorar a aplicação, checar seu *status* e métricas, podemos usar o Spring Boot Actuator, com ele os *REST Endpoints* são adicionados automaticamente.
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+Eis os *endpoint* prefixados com `/actuator`
+
+| Nome     | Descrição                                               |
+| -------- | ------------------------------------------------------- |
+| /health  | Informação da saúde/status da sua aplicação             |
+| /info    | Informação sobre o projeto                              |
+| /metrics | Mostra diversas informações de métrica da sua aplicação |
+
+*Há mais. Mas saiba que apenas `/health` é exposto por padrão, para exibir TUDO precisamos adicionar a linha `management.endpoints.web.exposure.include=*` no arquivo `application.properties`. Para exibir alguns poucos, pode ser assim `management.endpoints.web.exposure.include=health,info`*
+
+*O endpoint `/info` também requer, no arquivo `application.properties`, a linha `management.info.env.enabled=true`*
+
+*Para excluir, usamos a linha `management.endpoints.web.exposure.exclude=<escreva-aqui-os-endpoints-a-serem-excluídos>`*
+
+Meu arquivo .properties ficou assim:
+
+    management.endpoints.web.exposure.include=*
+    management.info.env.enabled=true
+    
+    info.app.name=Demo
+    info.app.description=Uma aplicação interessante
+    info.app.version=1.0.0
+
+Com o aplicativo rodando, você pode testar o `/health` acessando este link [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health).
+
+Quanto ao /info, ele lê informações do arquivo `application.properties`
+
+## Segurança<span id="springboot_security"></span>
+
+Não queremos que tudo fique exposto. Pra resolver esse problema, começamos adicionando a dependência do Spring Security  no `pom.xml`.
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+*Eu tive problemas com o Maven (o arquivo `pom.xml` acusava que tinha algo errado)porque eu tinha caracteres especiais ('ç', 'ã'), no arquivo properties, o que estava causando erro.*
+
+    management.endpoints.web.exposure.include=*
+    management.info.env.enabled=true
+    
+    info.app.name=Demo
+    info.app.description=Uma aplicacao interessante
+    info.app.version=1.0.0
+
+Quando tento acessar, por exemplo, http://localhost:8080/actuator/beans](http://localhost:8080/actuator/beans), será-me pedido um login e uma senha; por *default* o login é `user` e a senha é dada nos *console logs*. Mas no arquivo properties posso definir o usuário e senha, por exemplo:
+
+    spring.security.user.name=henrique
+    spring.security.user.password=12345
+
+## Como rodar aplicativos do Spring Boot via linha de comando<span id="springboot_commandline"></span>
+
+Veremos como rodar uma aplicação do Spring Boot sem a ajuda de uma IDE. O passo-a-passo:
+
+1. Fecha a IDE
+
+2. Empacota o aplicativo usando `mvnw package`
+
+3. Roda o aplicativo com o comando `java -jar` ou `mvnw spring-boot:run` *(um desses dois)*
+
+Vamos dizer que estou com o terminal ou prompt de comando aberto na pasta do meu projeto, no Linux ou MacOS rodo o comando `./mvnw package`, enquanto no Windows o comando é `mvnw package` *(se você já tiver o Maven instalado no seu sistema, simplesmente use o comando `mvn package`)*. O arquivo JAR será gerado na pasta `target`. No meu caso aqui, o nome do meu arquivo é `demo-0.0.1-SNAPSHOT.jar`, se o seu for diferente, procure modificar o nome do comando que passarei a seguir. Bom, entre na pasta `target` e rode um dos comandos abaixo:
+
+* `java -jar demo-0.0.1-SNAPSHOT.jar`
+
+* A outra opção seria permanecer na pasta onde se encontram os arquivos *mvnw* e usar o comando `mvnw spring-boot:run` puro.
+
+## Application Properties<span id="springboot_applicationproperties"></span>
+
+Se você ainda estiver usando o projeto anterior ou uma cópia deste, você pode agora remover as dependências relativas ao `spring-boot-starter-actuator` e `spring-boot-starter-security`.
+
+**application.properties**
+
+    treinador.nome=Lucas
+    time.nome=Bota Fogo
+
+**AppRestController.java**
+
+    package dominio.demo.rest;
+    
+    import org.springframework.beans.factory.annotation.Value;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    @RestController
+    public class AppRestController {
+        
+        @Value("${treinador.nome}")
+        private String treinador;
+        
+        @Value("${time.nome}")
+        private String time;
+        
+        @GetMapping("/")
+        public String olaMundo() {
+            return "O nome do treinador é " + treinador + " e seu time é o " + time;
+        }
+    
+    }
+
+Este só foi um exemplo simples, você pode ver a lista de propriedades [aqui](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html)
+
+Um exemplo é o `server.port`, se escrevo por exemplo
+
+    server.port=7071
+
+O link da minha aplicação será [http://localhost:7071/](http://localhost:7071/)
+
+## REST API com Hibernate<span id="springboot_resthibernate"></span>
+
+Ajeite o banco de dados:
+
+    CREATE DATABASE IF NOT EXISTS `empregadodb`;
+    USE `empregadodb`;
+    
+    DROP TABLE IF EXISTS `empregado`;
+    
+    CREATE TABLE `empregado` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    INSERT INTO `empregado` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+
+No Spring Initializr, coloquei o *Group* como `dominio` e o *Artifact/Name* como `crudhb`. Na parte das dependências, selecionei `Spring Web`, `Spring Boot DevTools` `Spring Data JPA`, `MySQL Driver`
+
+Aqui está o `pom.xml` do projeto
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    	<modelVersion>4.0.0</modelVersion>
+    	<parent>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-parent</artifactId>
+    		<version>2.7.0</version>
+    		<relativePath/> <!-- lookup parent from repository -->
+    	</parent>
+    	<groupId>dominio</groupId>
+    	<artifactId>crudhb</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    	<name>crudhb</name>
+    	<description>Demo project for Spring Boot</description>
+    	<properties>
+    		<java.version>17</java.version>
+    	</properties>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-data-jpa</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-web</artifactId>
+    		</dependency>
+    
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-devtools</artifactId>
+    			<scope>runtime</scope>
+    			<optional>true</optional>
+    		</dependency>
+    		<dependency>
+    			<groupId>mysql</groupId>
+    			<artifactId>mysql-connector-java</artifactId>
+    			<scope>runtime</scope>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-test</artifactId>
+    			<scope>test</scope>
+    		</dependency>
+    	</dependencies>
+    
+    	<build>
+    		<plugins>
+    			<plugin>
+    				<groupId>org.springframework.boot</groupId>
+    				<artifactId>spring-boot-maven-plugin</artifactId>
+    			</plugin>
+    		</plugins>
+    	</build>
+    
+    </project>
+
+*No meu caso, assim que eu importei o projeto e as dependências foram baixadas, eu recebi a seguinte mensagem de erro:*
+
+    Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:2.22.2:test (default-test) on project crudhb: There are test failures.
+
+Resolvi o problema simplesmente clicando com o botão direito do mouse sobre o projeto= > `Maven` => Update Project...`
+
+Vamos começar com os dados do nosso banco de dados:
+
+**application.properties**
+
+    # JDBC Properties
+    
+    spring.datasource.url=jdbc:mysql://localhost:3306/empregadodb?useSSL=false&serverTimezone=UTC
+    spring.datasource.username=estudante
+    spring.datasource.password=estudante
+
+O Spring Boot configura tão bem as coisas que até o nome de classe do driver JDBC é automaticamente detectado por meio da URL.
+
+Crie o pacote `dominio.crudhb.entity` e dentro deste crie a classe `Empregado`:
+
+    package dominio.crudhb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="empregado")
+    public class Empregado {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        public Empregado() {
+            
+        }
+    
+        public Empregado(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Empregado [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+Crie o pacote `dominio.crudhb.dao` e dentro dele os arquivos:
+
+**EmpregadoDAO.java**
+
+    package dominio.crudhb.dao;
+    
+    import java.util.List;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    public interface EmpregadoDAO {
+        
+        public List<Empregado> findAll();
+        
+        public Empregado findById(int theId);
+        
+        public void save(Empregado empregado);
+        
+        public void deleteById(int theId);
+    
+    }
+
+**EmpregadoDAOHibernateImpl.java**
+
+    package dominio.crudhb.dao;
+    
+    import java.util.List;
+    
+    import javax.persistence.EntityManager;
+    
+    import org.hibernate.Session;
+    import org.hibernate.query.Query;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    @Repository
+    public class EmpregadoDAOHibernateImpl implements EmpregadoDAO {
+        
+        private EntityManager entityManager;
+        
+        @Autowired
+        public EmpregadoDAOHibernateImpl(EntityManager entityManager) { // Este EntityManager entityManager aplica a dieia do Instructor INjection
+            this.entityManager = entityManager;
+        }
+    
+        @Override
+        public List<Empregado> findAll() {
+            
+            Session currentSession = entityManager.unwrap(Session.class); // Parece ser redundante a criação de um objeto Session em cada método, mas é que se eu declarar como "global", isso afetará o session pool e trará o problema de return too many connection
+            
+            Query<Empregado> theQuery = currentSession.createQuery("from Empregado", Empregado.class);
+            
+            List<Empregado> empregados = theQuery.getResultList();
+    
+            return empregados;
+        }
+    
+        @Override
+        public Empregado findById(int theId) {
+            
+            Session currentSession = entityManager.unwrap(Session.class);
+            
+            Empregado empregado = currentSession.get(Empregado.class, theId);
+            
+            return empregado;
+        }
+    
+        @Override
+        public void save(Empregado empregado) {
+            
+            Session currentSession = entityManager.unwrap(Session.class);
+            
+            currentSession.saveOrUpdate(empregado); // Se o ID for 0, ele cria um novo, caso contrário será uma operação de update
+            
+        }
+    
+        @Override
+        public void deleteById(int theId) {
+            
+            Session currentSession = entityManager.unwrap(Session.class);
+            
+            Query theQuery = currentSession.createQuery("delete from Empregado where id=:EmpregadoId");
+            theQuery.setParameter("EmpregadoId", theId);
+            theQuery.executeUpdate();
+                    
+        }
+        
+    }
+
+*Repare que usamos as classes nativas do Hibernate*
+
+O `EntityManager` é automaticamente criado pelo Sring Boot. Outro ponto a se considerar é que quando a classe tem apenas 1 *constructor*, o `@Autowired` é opcional.
+
+A implementação do DAO não necessita da *annotation* `@Transactional` porque ela será utilizada no *service*.
+
+Crie o pacote `dominio.crudhb.service` e dentro dele os arquivos:
+
+**EmpregadoService.java**
+
+    package dominio.crudhb.service;
+    
+    import java.util.List;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    public interface EmpregadoService {
+        
+        public List<Empregado> findAll();
+        
+        public Empregado findById(int theId);
+        
+        public void save(Empregado empregado);
+        
+        public void deleteById(int theId);
+    
+    }
+
+**EmpregadoServiceImpl.java**
+
+    package dominio.crudhb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.crudhb.dao.EmpregadoDAO;
+    import dominio.crudhb.entity.Empregado;
+    
+    @Service
+    public class EmpregadoServiceImpl implements EmpregadoService {
+        
+        private EmpregadoDAO empregadoDAO;
+        
+        @Autowired
+        public EmpregadoServiceImpl(EmpregadoDAO empregadoDAO) {
+            this.empregadoDAO = empregadoDAO;
+        }
+    
+        @Override
+        @Transactional
+        public List<Empregado> findAll() {
+            return empregadoDAO.findAll();
+        }
+    
+        @Override
+        @Transactional
+        public Empregado findById(int theId) {
+            return empregadoDAO.findById(theId);
+        }
+    
+        @Override
+        @Transactional
+        public void save(Empregado empregado) {
+            empregadoDAO.save(empregado);
+        }
+    
+        @Override
+        @Transactional
+        public void deleteById(int theId) {
+            empregadoDAO.deleteById(theId);
+        }
+    
+    }
+
+Crie o pacote `dominio.crudhb.rest` com o arquivo:
+
+**EmpregadoRestController.java**
+
+    package dominio.crudhb.rest;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.DeleteMapping;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.PutMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import dominio.crudhb.entity.Empregado;
+    import dominio.crudhb.service.EmpregadoService;
+    
+    @RestController
+    @RequestMapping("/api")
+    public class EmpregadoRestController {
+        
+        private EmpregadoService empregadoService;
+        
+        @Autowired
+        public EmpregadoRestController(EmpregadoService empregadoService) {
+            this.empregadoService = empregadoService;
+        }
+        
+        @GetMapping("/empregados")
+        public List<Empregado> findAll() {
+            return empregadoService.findAll();
+        }
+        
+        @GetMapping("/empregados/{empregadoId}")
+        public Empregado getEmpregado(@PathVariable int empregadoId) {
+            
+            Empregado empregado = empregadoService.findById(empregadoId);
+            
+            if (empregado == null) {
+                throw new RuntimeException("Empregado não encontrado - " + empregadoId);
+            }
+            
+            return empregado;
+        }
+        
+        @PostMapping("/empregados/")
+        public Empregado postEmpregado(@RequestBody Empregado empregado) {
+            
+            empregado.setId(0);
+            
+            empregadoService.save(empregado);
+            
+            return empregado;
+        }
+        
+        @PutMapping("/empregados/")
+        public Empregado putEmpregado(@RequestBody Empregado empregado) {
+            
+            empregadoService.save(empregado);
+            
+            return empregado;
+        }
+        
+        @DeleteMapping("/empregados/{empregadoId}")
+        public String deleteEmpregado(@PathVariable int empregadoId) {
+            
+            Empregado empregado = empregadoService.findById(empregadoId);
+            
+            if (empregado == null) {
+                throw new RuntimeException("Empregado não encontrado - " + empregadoId);
+            }
+            
+            empregadoService.deleteById(empregadoId);
+            
+            return "Empregado " + empregadoId + " deletado";
+        }
+    
+    }
+
+Agora você já pode executar o aplicativo e ver se os dados aaprecem no link [http://localhost:8080/api/empregados](http://localhost:8080/api/empregados)
+
+Você já sabe como fazer o CRUD com o Postman, fizemos isso no capítulo de [Spring REST](#springrest_final).
+
+## REST API com JPA<span id="springboot_restjpa"></span>
+
+Esta é uma continuação do subcapítulo anterior.
+
+Bom, como você já deve saber, ao usar JPA, não ficamos presos a uma implementação, o que deixa o código mais portável e flexível. Vejamos a comparação entre JPA e Hibernate:
+
+| Ação                         | Método do Hibernate          | Método JPA                     |
+| ---------------------------- | ---------------------------- | ------------------------------ |
+| Criar/salvar nova entidade   | session.save(...)            | entityManager.persist(...)     |
+| Recuperar entidade por ID    | session.get(...) / load(...) | entityManager.find(...)        |
+| Recuperar lista de entidades | session.createQuery(...)     | entityManager.createQuery(...) |
+| Salvar ou atualizar entidade | session.saveOrUpdate(...)    | entityManager.merge(...)       |
+| Deletar entidade             | session.delete(...)          | entityManager.remove(...)      |
+
+Crie uma nova classe no pacote `dominio.crudhb.dao`:
+
+**EmpregadoDAOJpaImpl.java**
+
+    package dominio.crudhb.dao;
+    
+    import java.util.List;
+    
+    import javax.persistence.EntityManager;
+    import javax.persistence.Query;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Repository;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    @Repository
+    public class EmpregadoDAOJpaImpl implements EmpregadoDAO {
+        
+        private EntityManager entityManager;
+        
+        @Autowired
+        public EmpregadoDAOJpaImpl(EntityManager entityManager) {
+            this.entityManager = entityManager;
+        }
+    
+        @Override
+        public List<Empregado> findAll() {
+            
+            Query theQuery = entityManager.createQuery("from Empregado"); // O JPA usa a linguagem JPQL para lidar com o SQL
+            // A propósito, repare que desta vez usei o Query do javax.persistence
+            
+            List<Empregado> empregados = theQuery.getResultList();
+            
+            return empregados;
+        }
+    
+        @Override
+        public Empregado findById(int theId) {
+            
+            Empregado empregado = entityManager.find(Empregado.class, theId);
+            
+            return empregado;
+        }
+    
+        @Override
+        public void save(Empregado empregado) {
+            
+            Empregado dbEmpregado = entityManager.merge(empregado); // Se o ID for 0, ele cria um novo, caso contrário será uma operação de update
+            dbEmpregado.setId(dbEmpregado.getId());
+        }
+    
+        @Override
+        public void deleteById(int theId) {
+            
+            Query theQuery = entityManager.createQuery("delete from Empregado where id=:empregadoId");
+            theQuery.setParameter("empregadoId", theId);
+            theQuery.executeUpdate();
+    
+        }
+    
+    }
+
+Se você tentar executar a aplicação agora, reparará que dará erro porque temos dois *beans* para alimentar `EmpregadoServiceImpl`, precisamos resolver esse conflito. É só alterar o construtor de `EmpregadoServiceImpl` através da *annotation* `@Qualifier`, em que colocamos o nome da classe, mas com a primeira letra em minúsculo:
+
+    package dominio.crudhb.service;
+    
+    import java.util.List;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.beans.factory.annotation.Qualifier;
+    import org.springframework.stereotype.Service;
+    import org.springframework.transaction.annotation.Transactional;
+    
+    import dominio.crudhb.dao.EmpregadoDAO;
+    import dominio.crudhb.entity.Empregado;
+    
+    @Service
+    public class EmpregadoServiceImpl implements EmpregadoService {
+        
+        private EmpregadoDAO empregadoDAO;
+        
+        @Autowired
+        public EmpregadoServiceImpl(@Qualifier("empregadoDAOJpaImpl") EmpregadoDAO empregadoDAO) {
+            this.empregadoDAO = empregadoDAO;
+        }
+    
+        @Override
+        @Transactional
+        public List<Empregado> findAll() {
+            return empregadoDAO.findAll();
+        }
+    
+        @Override
+        @Transactional
+        public Empregado findById(int theId) {
+            return empregadoDAO.findById(theId);
+        }
+    
+        @Override
+        @Transactional
+        public void save(Empregado empregado) {
+            empregadoDAO.save(empregado);
+        }
+    
+        @Override
+        @Transactional
+        public void deleteById(int theId) {
+            empregadoDAO.deleteById(theId);
+        }
+    
+    }
+
+## Spring Data<span id="springboot_data"></span>
+
+Vimos como criar um DAO para `Empregado`, mas e se quisermos criar um DAO para outra entidade como `Cliente`, `Fornecedor`, etc? Teremos que repetir esse código todo de novo?
+
+### Spring Data JPA<span id="springboot_data_jpa"></span>
+
+Com o Spring Data JPA, você coloca sua entidade e chave primária, que o Spring vai te dar a implementação do CRUD como se fosse mágica. Ele até traz os métodos que usamos como `findAll`, `getById`, `delete` e [outros](https://docs.spring.io/spring-data/jpa/docs/current/api/org/springframework/data/jpa/repository/JpaRepository.html).
+
+O *bloilerplate* é drasticamente reduzido.
+
+Bom, podemos tranquilamente deletar todos os arquivos DAO porque não precisaremos mais deles. Manteremos o pacote `dominio.crudhb.dao` e nele criaremos a interface `EmpregadoRepository`:
+
+    package dominio.crudhb.dao;
+    
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    public interface EmpregadoRepository extends JpaRepository<Empregado, Integer> {
+        
+        // Só isso, mais nada :-)
+    
+    }
+
+Agora precisamos atualizar o arquivo `EmpregadoServiceImpl`:
+
+    package dominio.crudhb.service;
+    
+    import java.util.List;
+    import java.util.Optional;
+    
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    
+    import dominio.crudhb.dao.EmpregadoRepository;
+    import dominio.crudhb.entity.Empregado;
+    
+    @Service
+    public class EmpregadoServiceImpl implements EmpregadoService {
+        
+        private EmpregadoRepository empregadoRepository;
+        
+        @Autowired
+        public EmpregadoServiceImpl(EmpregadoRepository empregadoRepository) {
+            this.empregadoRepository = empregadoRepository;
+        }
+    
+        @Override
+        public List<Empregado> findAll() {
+            return empregadoRepository.findAll();
+        }
+    
+        @Override
+        public Empregado findById(int theId) {
+            Optional<Empregado> result = empregadoRepository.findById(theId);
+            
+            Empregado empregado = null;
+            
+            if (result.isPresent()) {
+                empregado = result.get();
+            }
+            else {
+                throw new RuntimeException("Não foi encontrado um empreago com o ID " + theId);
+            }
+            
+            return empregado;
+        }
+    
+        @Override
+        public void save(Empregado empregado) {
+            empregadoRepository.save(empregado);
+        }
+    
+        @Override
+        public void deleteById(int theId) {
+            empregadoRepository.deleteById(theId);
+        }
+    
+    }
+
+A *annotation* `@Transactional` não é mais necessária porque JpaRepository provê essa funcionalidade.
+
+### Spring Data REST<span id="springboot_data_rest"></span>
+
+Nós vimos como criar uma API REST para `Empregado`, mas e se precisarmos criar uma API REST para outra entidade? O Spring Data REST nos ajudará nisso e ele ainda criará os *endpoints* pra gente!
+
+Em essência, você só precisa de 3 coisas:
+
+* A entidade, que no caso é `Empregado`
+
+* Um JpaRepository: `EmpregadoRepository extends JpaRepository`
+
+* A dependência no Maven: `spring-boot-starter-data-rest`
+
+Já temos 2 itens dessa lista, só falta adicionar Spring Data REST ao nosso arquivo `pom.xml`
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-rest</artifactId>
+    </dependency>
+
+<hr>
+
+**Como era antes?**
+
+*Controller* REST de `Empregado` ⇔ *Service* de `Empregado` ⇔ Repositório de `Empregado` (Spring Data JPA) ⇔ Banco de dados
+
+**Agora**
+
+Spring Data REST para `/empregado` ⇔ Repositório de `Empregado` (Spring Data JPA) ⇔ Banco de dados
+
+<hr>
+
+Os *endpoints do Spring Data REST são compatíveis com o HATEOAS (Hypermedia as the Engine of Application State)
+
+Com a dependência adicionada, podemos tranquilamente deletar os pacotes relacionados ao *controller* (que, no caso aqui, está no pacote `.rest`) e *service* junto com seus arquivos dentro.
+
+Pronto, é só isso, pode testar sua aplicação 🙂
+
+Uma coisa engraçada é que o caminho criado pelo Spring Data REST para ver todos os itens da lista não foi [http://localhost:8080/empregados](http://localhost:8080/empregados), mas sim [http://localhost:8080/empregadoes](http://localhost:8080/empregadoes). Isso porque Spring Data REST assume que estamos inserindo uma palavra em inglês. Na verdade, até mesmo dentro da língua inglesa haverá problemas, porque o Spring Data REST é muito simplista e não saberá, por exemplo, que o plural de "*goose*" é "*geese*", mas isso pode ser facilmente resolvido com uma *annotation* na classe `EmpregadoRepository`.
+
+    package dominio.crudhb.dao;
+    
+    import org.springframework.data.jpa.repository.JpaRepository;
+    import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    @RepositoryRestResource(path="empregados")
+    public interface EmpregadoRepository extends JpaRepository<Empregado, Integer> {
+        
+        // Só isso, mais nada :-)
+    
+    }
+
+A propósito, podemos inserir prefixos para o caminho da nossa API, é só atualizarmos nosso arquivo .properties.
+
+    # JDBC Properties
+    
+    spring.datasource.url=jdbc:mysql://localhost:3306/empregadodb?useSSL=false&serverTimezone=UTC
+    spring.datasource.username=estudante
+    spring.datasource.password=estudante
+    
+    # Spring Data REST properties
+    
+    spring.data.rest.base-path=/api
+
+Agora você poderá acessar pelo link [http://localhost:8080/api/empregados](http://localhost:8080/api/empregados)
+
+Fique sabendo que há outras propriedades para configurar o Spring Data REST como `spring.data.rest.default-page-size`.
+
+### BÔNUS: O projeto final<span id="springboot_data_final"></span>
+
+Essa versão é relativamente simplificada, talvez seja interessante refazer o projeto que começa no capítulo [REST API com Hibernate](#springboot_resthibernate)
+
+Ajeite o banco de dados:
+
+    CREATE DATABASE IF NOT EXISTS `empregadodb`;
+    USE `empregadodb`;
+    
+    DROP TABLE IF EXISTS `empregado`;
+    
+    CREATE TABLE `empregado` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    INSERT INTO `empregado` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+
+No Spring Initializr, coloquei o *Group* como `dominio` e o *Artifact/Name* como `crudhb`. Na parte das dependências, selecionei `Spring Web`, `Spring Boot DevTools` `Spring Data JPA`, `REST Repositories`, `MySQL Driver`. 
+
+**CrudhbApplication.java** *(gerado pelo próprio Spring Boot)*
+
+    package dominio.crudhb;
+    
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    
+    @SpringBootApplication
+    public class CrudhbApplication {
+    
+    	public static void main(String[] args) {
+    		SpringApplication.run(CrudhbApplication.class, args);
+    	}
+    
+    }
+
+**pom.xml** *(gerado pelo próprio Spring Boot, mas o código abaixo em específico foi manualmente editado por mim durante a criação do aplicativo)*
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    	<modelVersion>4.0.0</modelVersion>
+    	<parent>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-parent</artifactId>
+    		<version>2.7.0</version>
+    		<relativePath/> <!-- lookup parent from repository -->
+    	</parent>
+    	<groupId>dominio</groupId>
+    	<artifactId>crudhb</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    	<name>crudhb</name>
+    	<description>Demo project for Spring Boot</description>
+    	<properties>
+    		<java.version>17</java.version>
+    	</properties>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-data-jpa</artifactId>
+    		</dependency>
+    		<dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-rest</artifactId>
+            </dependency>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-web</artifactId>
+    		</dependency>
+    
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-devtools</artifactId>
+    			<scope>runtime</scope>
+    			<optional>true</optional>
+    		</dependency>
+    		<dependency>
+    			<groupId>mysql</groupId>
+    			<artifactId>mysql-connector-java</artifactId>
+    			<scope>runtime</scope>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.springframework.boot</groupId>
+    			<artifactId>spring-boot-starter-test</artifactId>
+    			<scope>test</scope>
+    		</dependency>
+    	</dependencies>
+    
+    	<build>
+    		<plugins>
+    			<plugin>
+    				<groupId>org.springframework.boot</groupId>
+    				<artifactId>spring-boot-maven-plugin</artifactId>
+    			</plugin>
+    		</plugins>
+    	</build>
+    
+    </project>
+
+**application.properties** *(gerado vazio pelo próprio Spring Boot)*
+
+    # JDBC Properties
+    
+    spring.datasource.url=jdbc:mysql://localhost:3306/empregadodb?useSSL=false&serverTimezone=UTC
+    spring.datasource.username=estudante
+    spring.datasource.password=estudante
+
+Crie os pacotes abaixo:
+
+* `dominio.crudhb.dao`
+
+* `dominio.crudhb.entity`
+
+No pacote `dominio.crudhb.entity`, crie o arquivo:
+
+**Empregado.java**
+
+    package dominio.crudhb.entity;
+    
+    import javax.persistence.Column;
+    import javax.persistence.Entity;
+    import javax.persistence.GeneratedValue;
+    import javax.persistence.GenerationType;
+    import javax.persistence.Id;
+    import javax.persistence.Table;
+    
+    @Entity
+    @Table(name="empregado")
+    public class Empregado {
+        
+        @Id
+        @GeneratedValue(strategy=GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+        
+        @Column(name="nome")
+        private String nome;
+        
+        @Column(name="sobrenome")
+        private String sobrenome;
+        
+        @Column(name="email")
+        private String email;
+        
+        public Empregado() {
+            
+        }
+    
+        public Empregado(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Empregado [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+No pacote `dominio.crudhb.dao`, crie o arquivo:
+
+**EmpregadoRepository.java**
+
+    package dominio.crudhb.dao;
+    
+    import org.springframework.data.jpa.repository.JpaRepository;
+    import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+    
+    import dominio.crudhb.entity.Empregado;
+    
+    @RepositoryRestResource(path="empregados")
+    public interface EmpregadoRepository extends JpaRepository<Empregado, Integer> {
+        
+        // Só isso, mais nada :-)
+    
+    }
+
+# Thymeleaf<span id="thymeleaf"></span>
+
+Thymeleaf *(pronunciamos "Thyme" como "time" mesmo)* é um *template engine* do Java, é um projeto sem relação com o Spring, ele pode ser usado sem o Spring, mas os dois sçao comumente usados juntos.
+
+Em um aplicativo web, o Thymeleaf é processado no servidor, é muito similar ao JSP, mas a diferença é que o Thymeleaf também pode ser utilizado em um ambiente não-web, como templates de e-mail, CSV e PDF.
+
+Eis a dependência Maven do Thymeleaf no `pom.xml`
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+No Spring Boot, os templates do Thymeleaf ficam na pasta `src/main/resources/templates`. No arquivo HTML, precisamos adicionar a linha logo abaixo após o `<!DOCTYPE html>`:
+
+    <html xmlns:th="http://www.thymeleaf.org">
+
+Vamos criar um projeto simples, no Spring Initializr, coloquei o *Group* como `dominio` e o *Artifact/Name* como `leaf`. Na parte das dependências, selecionei `Spring Web`, `Spring Boot DevTools` e `Thymeleaf` *(você já entende que estamos colocando o `Spring Boot DevTools` apenas por uma questão de conveniência)*.
+
+Crie o pacote `dominio.leaf.controller` com o arquivo:
+
+**AppController.java**
+
+    package dominio.leaf.controller;
+    
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    
+    @Controller
+    public class AppController {
+    
+        @GetMapping("/oi")
+        public String digaOi(Model model) {
+            model.addAttribute("data", new java.util.Date());
+    
+            return "ola"; // Por conta do Thymeleaf, já se presumpõe que há o arquivo src/main/resources/templates/ola.html
+        }
+    
+    }
+
+Na pasta `src/main/resources/static`, crie a pasta `css`, e dentro desta o arquivo:
+
+**demo.css**
+
+    body {
+        color: red;
+        font-weight: bold;
+    }
+
+Na pasta `src/main/resources/templates`, crie o arquivo:
+
+**ola.html**
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Olá</title>
+        <link rel="stylesheet" th:href="@{/css/demo.css}" />
+    </head>
+    <body>
+    
+        <p>Olá mundo</p>
+    
+        <p th:text="'O horário no servidor é ' + ${data}" />
+    </body>
+    </html>
+
+O símbolo `@` em `@{/css/demo.css}` se refere ao caminho de contexto da sua aplicação.
+
+## Tabelas<span id="thymeleaf_tables"></span>
