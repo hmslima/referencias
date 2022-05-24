@@ -224,6 +224,8 @@
 
 	* [Tabelas](#thymeleaf_tables)
 
+	* [Projeto completo CRUD: Thymeleaf + Spring Boot](#thymeleaf_crudfinal)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -15723,9 +15725,11 @@ Eis a dependência Maven do Thymeleaf no `pom.xml`
         <artifactId>spring-boot-starter-thymeleaf</artifactId>
     </dependency>
 
-No Spring Boot, os templates do Thymeleaf ficam na pasta `src/main/resources/templates`. No arquivo HTML, precisamos adicionar a linha logo abaixo após o `<!DOCTYPE html>`:
+No Spring Boot, os templates do Thymeleaf ficam na pasta `src/main/resources/templates`. No arquivo HTML, precisamos substituir a tag `<html>` pela linha logo abaixo...
 
     <html xmlns:th="http://www.thymeleaf.org">
+
+...para que possamos usar as expressões do Thymeleaf.
 
 Vamos criar um projeto simples, no Spring Initializr, coloquei o *Group* como `dominio` e o *Artifact/Name* como `leaf`. Na parte das dependências, selecionei `Spring Web`, `Spring Boot DevTools` e `Thymeleaf` *(você já entende que estamos colocando o `Spring Boot DevTools` apenas por uma questão de conveniência)*.
 
@@ -15782,3 +15786,505 @@ Na pasta `src/main/resources/templates`, crie o arquivo:
 O símbolo `@` em `@{/css/demo.css}` se refere ao caminho de contexto da sua aplicação.
 
 ## Tabelas<span id="thymeleaf_tables"></span>
+
+Podemos reutilizar os arquivos do projeto anterior ou criar um novo dozero, tanto faz.
+
+Crie o pacote `dominio.leaf.model` *(assumo aqui que você manteve os mesmos nomes do projeto anterior...)* e dentro dele a classe:
+
+**Empregado.java**
+
+    package dominio.leaf.model;
+    
+    public class Empregado {
+    
+        private int id;
+        private String nome;
+        private String sobrenome;
+        private String email;
+    
+        public Empregado() {
+    
+        }
+    
+        public Empregado(int id, String nome, String sobrenome, String email) {
+            this.id = id;
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Empregado{" +
+                    "id=" + id +
+                    ", nome='" + nome + '\'' +
+                    ", sobrenome='" + sobrenome + '\'' +
+                    ", email='" + email + '\'' +
+                    '}';
+        }
+    }
+
+Crie o pacote `dominio.leaf.controller` e crie o arquivo:
+
+**EmpregadoController.java**
+
+    package dominio.leaf.controller;
+    
+    import dominio.leaf.model.Empregado;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestMapping;
+    
+    import javax.annotation.PostConstruct;
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    @Controller
+    @RequestMapping("/empregados")
+    public class EmpregadoController {
+    
+        private List<Empregado> empregados;
+    
+        @PostConstruct
+        private void loadData() {
+            Empregado emp1 = new Empregado(1, "Diana", "Tavares", "diana@terra.com.br");
+            Empregado emp2 = new Empregado(1, "Mario", "Andrade", "andrade@terra.com.br");
+            Empregado emp3 = new Empregado(1, "Carla", "Guimarães", "cg@hotmail.com.br");
+    
+            empregados = new ArrayList<>();
+    
+            empregados.add(emp1);
+            empregados.add(emp2);
+            empregados.add(emp3);
+        }
+    
+        @GetMapping("/lista")
+        public String listaEmpregados(Model modelo) {
+            modelo.addAttribute("empregadosAtt", empregados);
+            return "lista";
+        }
+    }
+
+Usaremos o [Bootstrap](https://getbootstrap.com/) para o CSS do nosso projeto. Você pode baixar o arquivo para usar localmente *(que você já sabe como fazer)* ou carregar a folha de estilos de forma remota, usarei esta segunda opção nesta vez, até para simplificar pra gente.
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Lista de Epregados</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css">
+    
+    </head>
+    <body>
+        <div class="container">
+            <h3>Lista de Empregados</h3>
+    
+            <table class="table table-dark">
+                <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Sobrenome</th>
+                    <th>E-mail</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="EmpregadoTemp : ${empregadosAtt}" class="table-active">
+                    <td th:text="${EmpregadoTemp.nome}" />
+                    <td th:text="${EmpregadoTemp.sobrenome}" />
+                    <td th:text="${EmpregadoTemp.email}" />
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </body>
+    </html>
+
+## Projeto completo CRUD: Thymeleaf + Spring Boot<span id="thymeleaf_crudfinal"></span>
+
+Vamos criar um projeto simples, no Spring Initializr, coloquei o *Group* como `dominio` e o *Artifact/Name* como `leafcrud`. Na parte das dependências, selecionei `Spring Web`, `Spring Data JPA`, `MySQL Driver` e `Thymeleaf`.
+
+No banco de dados:
+
+    CREATE DATABASE IF NOT EXISTS `empregadodb`;
+    USE `empregadodb`;
+    
+    DROP TABLE IF EXISTS `empregado`;
+    
+    CREATE TABLE `empregado` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `nome` varchar(45) DEFAULT NULL,
+      `sobrenome` varchar(45) DEFAULT NULL,
+      `email` varchar(45) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+    
+    
+    INSERT INTO `empregado` VALUES 
+    	(1,'Marcelino','Travolta','marcelino@gmail.com'),
+    	(2,'Cuca','Beludo','culudo@gmail.com'),
+    	(3,'Paula','Barbosa','paulinha@gmail.com'),
+    	(4,'Oscar','Alho','alho@gmail.com'),
+    	(5,'Maria','Freitas','maria@gmail.com');
+
+De volta à IDE:
+
+**application.properties**
+
+    # JDBC Properties
+    
+    spring.datasource.url=jdbc:mysql://localhost:3306/empregadodb?useSSL=false&serverTimezone=UTC
+    spring.datasource.username=estudante
+    spring.datasource.password=estudante
+
+Crie o pacote `dominio/leafcrud/entity` com a classe:
+
+**Empregado.java**
+
+    package dominio.leafcrud.entity;
+    
+    import javax.persistence.*;
+    
+    @Entity
+    @Table(name="empregado")
+    public class Empregado {
+    
+        @Id
+        @GeneratedValue(strategy= GenerationType.IDENTITY)
+        @Column(name="id")
+        private int id;
+    
+        @Column(name="nome")
+        private String nome;
+    
+        @Column(name="sobrenome")
+        private String sobrenome;
+    
+        @Column(name="email")
+        private String email;
+    
+        public Empregado() {
+    
+        }
+    
+        public Empregado(String nome, String sobrenome, String email) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.email = email;
+        }
+    
+        public int getId() {
+            return id;
+        }
+    
+        public void setId(int id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public String getEmail() {
+            return email;
+        }
+    
+        public void setEmail(String email) {
+            this.email = email;
+        }
+    
+        @Override
+        public String toString() {
+            return "Empregado [id=" + id + ", nome=" + nome + ", sobrenome=" + sobrenome + ", email=" + email + "]";
+        }
+    
+    }
+
+Crie o pacote `dominio.leaf.dao` com a interface:
+
+**EmpregadoRepository.java**
+
+    package dominio.leafcrud.dao;
+    
+    import dominio.leafcrud.entity.Empregado;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    import java.util.List;
+    
+    public interface EmpregadoRepository extends JpaRepository<Empregado, Integer> {
+    
+    }
+
+Crie o pacote `dominio.leaf.service` com os arquivos:
+
+**EmpregadoService.java**
+
+    package dominio.leafcrud.service;
+    
+    import dominio.leafcrud.entity.Empregado;
+    
+    import java.util.List;
+    
+    public interface EmpregadoService {
+        public List<Empregado> findAll();
+    
+        public Empregado findById(int theId);
+    
+        public void save(Empregado empregado);
+    
+        public void deleteById(int theId);
+    }
+
+**EmpregadoServiceImpl.java**
+
+    package dominio.leafcrud.service;
+    
+    import dominio.leafcrud.dao.EmpregadoRepository;
+    import dominio.leafcrud.entity.Empregado;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    
+    import java.util.List;
+    import java.util.Optional;
+    
+    @Service
+    public class EmpregadoServiceImpl implements EmpregadoService {
+    
+        private EmpregadoRepository empregadoRepository;
+    
+        @Autowired
+        public EmpregadoServiceImpl(EmpregadoRepository empregadoRepository) {
+            this.empregadoRepository = empregadoRepository;
+        }
+    
+        @Override
+        public List<Empregado> findAll() { return empregadoRepository.findAll(); }
+    
+        @Override
+        public Empregado findById(int theId) {
+            Optional<Empregado> result = empregadoRepository.findById(theId);
+    
+            Empregado empregado = null;
+    
+            if (result.isPresent()) {
+                empregado = result.get();
+            }
+            else {
+                throw new RuntimeException("Não foi encontrado um empreago com o ID " + theId);
+            }
+    
+            return empregado;
+        }
+    
+        @Override
+        public void save(Empregado empregado) {
+            empregadoRepository.save(empregado);
+        }
+    
+        @Override
+        public void deleteById(int theId) {
+            empregadoRepository.deleteById(theId);
+        }
+    }
+
+Crie o pacote `dominio.leaf.controller` com a classe:
+
+**EmpregadoController.java**
+
+    package dominio.leafcrud.controller;
+    
+    import dominio.leafcrud.entity.Empregado;
+    import dominio.leafcrud.service.EmpregadoService;
+    import org.springframework.stereotype.Controller;
+    import org.springframework.ui.Model;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @Controller
+    @RequestMapping("/empregados")
+    public class EmpregadoController {
+    
+        private EmpregadoService empregadoService;
+    
+        public EmpregadoController(EmpregadoService empregadoService) {
+            this.empregadoService = empregadoService;
+        }
+    
+        @GetMapping("/lista")
+        public String listaEmpregados(Model modelo) {
+            List<Empregado> empregados = empregadoService.findAll();
+            modelo.addAttribute("empregados", empregados);
+    
+            return "empregados/lista";
+        }
+    
+        @GetMapping("/cadastroForm")
+        public String cadastroForm(Model modelo) {
+            Empregado empregado = new Empregado();
+            modelo.addAttribute("empregado", empregado);
+    
+            return "empregados/form";
+        }
+    
+        @PostMapping("/salvar")
+        public String salvarEmpregado(@ModelAttribute("empregado") Empregado empregado) {
+        // Esse @ModelAttribute("empregado") se comunica com o th:object="${empregado} do arquivo form.html
+    
+            empregadoService.save(empregado);
+    
+            return "redirect:/empregados/lista";
+        }
+    
+        @GetMapping("/atualizacaoForm")
+        public String atualizacaoForm(@RequestParam("empregadoId") int theId, Model modelo) {
+    
+            Empregado empregado = empregadoService.findById(theId);
+    
+            modelo.addAttribute("empregado", empregado);
+    
+            return "empregados/form";
+        }
+    
+        @GetMapping("/deletar")
+        public String deletar(@RequestParam("empregadoId") int theId) {
+    
+            empregadoService.deleteById(theId);
+    
+            return "redirect:/empregados/lista";
+        }
+    }
+
+Na pasta `src/main/resources/static`, crie o arquivo:
+
+**index.html**
+
+    <meta http-equiv="refresh" content="0; URL='empregados/lista'" />
+
+Na pasta `src/main/resources/templates/empregados`, crie os arquivos:
+
+**lista.html**
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lista de Epregados</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css">
+    </head>
+    <body>
+    <div class="container">
+        <h3>Lista de Empregados</h3>
+    
+        <a th:href="@{cadastroForm}" class="btn btn-primary btn-sm mb-3">Cadastrar empregado</a>
+    
+        <table class="table">
+            <thead class="table-dark">
+            <tr>
+                <th>Nome</th>
+                <th>Sobrenome</th>
+                <th>E-mail</th>
+                <th>Ações</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="empregadoTemp : ${empregados}" class="table-light">
+                <td th:text="${empregadoTemp.nome}" />
+                <td th:text="${empregadoTemp.sobrenome}" />
+                <td th:text="${empregadoTemp.email}" />
+                <td>
+                    <a th:href="@{/empregados/atualizacaoForm(empregadoId=${empregadoTemp.id})}" class="btn btn-info btn-sm">Atualizar</a>
+                    <a th:href="@{/empregados/deletar(empregadoId=${empregadoTemp.id})}" class="btn btn-danger btn-sm"
+                    onclick="if (!(confirm('Você tem certeza que quer deletar este empregado?'))) return false;">Deletar</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    </body>
+    </html>
+
+**form.html**
+
+    <!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Formulário</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css">
+    </head>
+    <body>
+        <div class="container">
+    
+            <h3>Página de cadastro</h3>
+    
+            <form action="#" th:action="@{/empregados/salvar}" th:object="${empregado}" method="POST">
+            <!-- Esse ${empregado} tem que ser o mesmo do modelo.addAttribute("empregado", empregado); do controller -->
+    
+                <input type="hidden" th:field="*{id}" />
+                <!-- Este formulário escondido é para lidar com o update -->
+    
+                <input type="text" th:field="*{nome}" class="form-control mb-4 col-4" placeholder="Nome">
+                <!-- *{nome} seleciona a propriedade do objeto referenciado em th:object, que no caso chama o método empregado.getNome()-->
+    
+                <input type="text" th:field="*{sobrenome}" class="form-control mb-4 col-4" placeholder="Sobrenome">
+    
+                <input type="text" th:field="*{email}" class="form-control mb-4 col-4" placeholder="E-mail">
+    
+                <button type="submit" class="btn btn-info col-2">Salvar</button>
+                <!-- Quando clicamos nesse botão, são chamados os métodos empregado.setNome(), empregado.setSobrenome(), etc -->
+    
+            </form>
+    
+            <hr>
+    
+            <a th:href="@{/empregados/lista}">Retornar para a lista</a>
+        </div>
+    </body>
+    </html>
