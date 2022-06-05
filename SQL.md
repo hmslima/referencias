@@ -53,7 +53,6 @@
 		* [Comando JOIN](#sql_comandosBasicos_join)
 
 		* [Como saber qual é a porta](#sql_comandosBasicos_porta)
-</div>
 
 # Introdução<span id="intro"></span>
 
@@ -64,6 +63,8 @@ Leia o [README](README.md).
 Antes de prosseguirmos para o capítulo seguinte, precisamos entender como mexer com banco de dados SQL.
 
 Há muitos bancos de dados que usam a linguagem SQL, como o SQL Server, PostgreSQL e MySQL, mas usaremos esse último. Não se preocupe porque como todos usam o SQL, os comandos básicos são os mesmos.
+
+[Aqui](Postgresql.md) eu fiz uma referência para PostgreSQL.
 
 ## Instalação no Windows<span id="sql_instWindows"></span>
 

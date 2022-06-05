@@ -18,6 +18,10 @@
 
 	* [Instalação de módulos com o NPM](#nodejs_npm)
 
+	* [Manipulação de JSON](#nodejs_json)
+
+	* [Nodemon](#nodejs_nodemon)
+
 	* [Framework Express](#nodejs_express)
 
 		* [Roteamento](#nodejs_express_roteamento)
@@ -392,7 +396,44 @@ Outras *flags* são a `--save-optional` e `--no-save`, em que a primeira informa
 
 Por fim, temos a *flag* `--global`, esta em vez de instalar o módulo de forma local, instalará o módulo no sistema, é por isso que, durante a sua instalação, será pedido um usuário privilegiado para instalar o módulo, como se você estivesse instalando um programa comum no seu sistema operacional.
 
-## Nodemon
+## Manipulação de JSON<span id="nodejs_json"></span>
+
+    const fs = require('fs');
+    
+    // Objeto JavaScript
+    const livro = {
+        titulo: "O Senhor dos Anés",
+        autor: "Tolkien"
+    }
+    
+    // JSON.stringify converte objeto para string, quando enviamos dados para o servidor, esse dado precisa ser uma string
+    const livroJSON = JSON.stringify(livro);
+    
+    console.log("O objeto");
+    console.log(livro);
+    
+    console.log(); // Só pr apular uma linha
+    
+    console.log("A string");
+    console.log(livroJSON);
+    
+    console.log();
+    
+    // Salva um arquivo JSON no seu computador
+    fs.writeFileSync('livro.json', livroJSON);
+    
+    // Lê um arquivo chamado "livro.json"
+    const dataBuffer = fs.readFileSync('livro.json');
+    
+    console.log("O arquivo JSON como binário");
+    console.log(dataBuffer);
+    
+    console.log();
+    
+    console.log("O arquivo JSON como string");
+    console.log(dataBuffer.toString());
+
+## Nodemon<span id="nodejs_nodemon"></span>
 
 [Website](https://nodemon.io/)
 
@@ -550,7 +591,7 @@ Não tenho o que falar dos arquivos dentro da pasta `views/partials/` uma vez 	q
 
 No arquivo `index.ejs`, temos as *tags* `<%- %>` onde colocamos nossos *includes*. Também não tem muito o que explicar, o `<%- include(); %>` insere um pedaço de HTML em outro arquivo HTML.
 
-Quanto ao arquivo `index.js`, a linha `const app = express();` cria uma aplicação Express para você.
+Quanto ao arquivo `index.js`, a linha `const app = express();` cria uma aplicação Express para você, ou seja, `const app = express();` retorna um objeto de aplicativo.
 
 `app.set()` atribui um nome de configuração a um valor. No caso mexemos com a propriedade `view engine`, em que atribuimos a ela o valor `ejs`. Se, por exemplo, estivéssemos usando a tecnologia Handlebars, essa linha seria `app.set('view engine', 'hbs');`.
 
@@ -1690,7 +1731,7 @@ Este aqui é para tratar dos caminhos. O `'/'` aqui serve como prefixo, se fosse
 
     const router = express.Router();
 
-O `express.Router` permite criar manipuladores de rotas.
+O `express.Router` permite criar manipuladores de rotas. É como o `const app = express();`, o `const router = express.Router();` retorna um miniaplicativo, a ideia é que cada miniaplicativo desses possa se tornar mais complexo e você poderá mover todo esse código para um arquivo separado. Por exemplo, posso pôr rotas em um arquivo `gatos.js` e exportá-los (`module.exports = router;`) para o arquivo principal que os chamaria (`const gatos = require('/routes/gatos'); app.use('/gatos', gatos)`)
 
     router.post('/salvartarefa', (req, res) => {
 
