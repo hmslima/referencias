@@ -226,6 +226,8 @@
 
 	* [Projeto completo CRUD: Thymeleaf + Spring Boot](#thymeleaf_crudfinal)
 
+* [BÔNUS: Calculadora](#calculator)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -16288,3 +16290,116 @@ Na pasta `src/main/resources/templates/empregados`, crie os arquivos:
         </div>
     </body>
     </html>
+
+# BÔNUS: Calculadora<span id="calculator"></span>
+
+Crie um projeto pelo Spring Initializr com `Spring Web`. Assumirei que o *Group* será `dominio` e o *Artifact/Name* como `calc`:
+
+Crie o pacote `dominio.dto`, e dentro dele a classe:
+
+**CalculatorDTO.java**
+
+    package dominio.calc.dto;
+    
+    import com.fasterxml.jackson.annotation.JsonProperty;
+    
+    public class CalculatorDTO {
+    
+        private Double num1;
+        private Double num2;
+        private Double num3;
+        @JsonProperty("num41")
+        private Double num4;
+    
+        public Double getNum1() {
+            return num1;
+        }
+    
+        public void setNum1(Double num1) {
+            this.num1 = num1;
+        }
+    
+        public Double getNum2() {
+            return num2;
+        }
+    
+        public void setNum2(Double num2) {
+            this.num2 = num2;
+        }
+    
+        public Double getNum3() {
+            return num3;
+        }
+    
+        public void setNum3(Double num3) {
+            this.num3 = num3;
+        }
+    
+        public Double getNum4() {
+            return num4;
+        }
+    
+        public void setNum4(Double num4) {
+            this.num4 = num4;
+        }
+    }
+
+Crie o pacote `dominio.controller`, e dentro dele a classe:
+
+**CalculatorController.java**
+
+    package dominio.calc.controller;
+    
+    import dominio.calc.dto.CalculatorDTO;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    @RestController
+    @RequestMapping("/api/v1/calculator")
+    public class CalculatorController {
+    
+        @GetMapping("/add")
+        public Double add(@RequestParam("num1") Double num1, @RequestParam("num2") Double num2){
+            return num1 + num2;
+        }
+    
+        @GetMapping("/sub/{num1}/{num2}")
+        public Double sub(@PathVariable("num1") Double num1, @PathVariable("num2") Double num2) {
+    
+            Double result = null;
+            if (num1 > num2) {
+                result = num1 - num2;
+            }
+            else {
+                result = num2 - num1;
+            }
+            return result;
+    
+        }
+    
+        @PostMapping("/mul")
+        public Double multiply(@RequestBody CalculatorDTO calculatorDTO) {
+            Double result = null;
+            result = calculatorDTO.getNum1() * calculatorDTO.getNum2() * calculatorDTO.getNum3() * calculatorDTO.getNum4();
+            return result;
+        }
+    
+        // Uma alternativa de código que manda um HttpStatus 201 em vez de 200
+        /*@PostMapping("/mul")
+        public ResponseEntity multiply(@RequestBody CalculatorDTO calculatorDTO) {
+            Double result = null;
+            result = calculatorDTO.getNum1() * calculatorDTO.getNum2() * calculatorDTO.getNum3() * calculatorDTO.getNum4();
+            ResponseEntity<Double> responseEntity = new ResponseEntity<>(result, HttpStatus.CREATED);
+            return responseEntity;
+        }*/
+    }
+
+No Postman, use este *body* abaixo, no método POST, para o link `http://localhost:8080/api/v1/calculator/mul`
+
+    {
+        "num1" : 5.0,
+        "num2" : 2.0,
+        "num3" : 1.0,
+        "num41" : 6.3
+    }

@@ -14,11 +14,23 @@
 
 	* [Comparação entre MySQL e PostgreSQL](#postgres_mysql)
 
+	* [Usuários](#postgres_users)
+
+		* [Criação de usuários](#postgres_users_create)
+
+		* [Lista de usuários](#postgres_users_list)
+
+		* [Permissões dos usuários](#postgres_users_permissions)
+
+	* [Criação de banco de dados](#postgres_db)
+
+	* [Conexão com o Spring](#postgres_springconnection)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
 
-Este documento é só um complemento para [SQL.md], apenas para criar referências para o banco de dados PostgreSQL.
+Este documento é só um complemento para [SQL.md](SQL.md), apenas para criar referências para o banco de dados PostgreSQL.
 
 # PostgreSQL<span id="postgres"></span>
 
@@ -89,6 +101,52 @@ Acesse a página [http://localhost:61886/browser](http://localhost:61886/browser
 | show databases; | \l          |
 | show tables;    | \dt         |
 | use database;   | \c database |
+| exit;           | \q          |
+
+## Usuários<span id="postgres_users"></span>
+
+### Criação de usuários<span id="postgres_users_create"></span>
+
+Já ensinei como criar usuários, isto aqui é só uma recapitulação. Bom, se certifique de usar um usuário com permissão para criar outros usuários:
+
+Para criar usuário sem senha:
+
+    CREATE ROLE <usuário> jonathan LOGIN;
+
+Para criar usuário com senha senha:
+
+    CREATE USER <usuário> WITH PASSWORD '<senha>';
+
+`CREATE ROLE` e `CREATE USER` são a mesma coisa, a diferença é que `CREATE USER` implica a adição de uma senha
+
+Para criar usuário com senha senha e com uma permissão já definida:
+
+    CREATE USER <usuário> WITH PASSWORD '<senha>' <permissão>;
+
+Exemplo:
+
+    CREATE USER thiago WITH PASSWORD '12345' CREATEDB;
+
+### Lista de usuários<span id="postgres_users_list"></span>
+
+    SELECT * FROM pg_user;
+
+### Permissões usuários<span id="postgres_users_permissions"></span>
+
+Para listar as permissões atuais dos usuários:
+
+    \du
+
+Para alterar as permissões:
+
+    ALTER USER <usuário> WITH OPTION1 OPTION2 OPTION3;
+
+Algumas dessas opções podem ser `CREATEDB`, `CREATEROLE`, `CREATEUSER`, e até mesmo `SUPERUSER`.
+
+Exemplo:
+
+    ALTER USER mariana WITH CREATEDB;
+
 
 ## Criação de banco de dados<span id="postgres_db"></span>
 
@@ -97,7 +155,7 @@ Vamos dizer que quero criar o banco de dados `estudo`:
     CREATE DATABASE estudo;
     \c estudo
 
-## Conexão com o Sprig
+## Conexão com o Spring<span id="postgres_springconnection"></span>
 
 Tive problemas para conectar o banco de dados com o Spring por conta do sistema de autenticação do PostgreSQL.
 

@@ -450,11 +450,19 @@ Atualize a tabela `funcionario` definindo a coluna `Id` para 3, a coluna `Sobren
 
 ### Deleção de tabelas<span id="sql_comandosBasicos_deletarTabelas"></span>
 
-Nós poderíamos deletar a tabela `funcionarios` com o comando abaixo...
+Nós poderíamos deletar a tabela `funcionarios` inteira com o comando abaixo...
 
     DROP TABLE funcionarios; 
 
 ...e simplesmente criar uma nova. Mas e se a tabela que estivéssemos lidando já estivesse sendo usada em produção com centenas, milhares ou milhões de dados? Recriar tudo do zero não seria viável.
+
+A propósito, para deletar uma única linha, usamos o comando abaixo:
+
+    DELETE FROM <tabela> WHERE <condição>;
+
+Um comando parecido é o *Truncate*, que deleta os dados de dentro de uma tabela, mas não a tabela em si
+
+    TRUNCATE TABLE funcionarios; 
 
 ### Alteração de tabelas<span id="sql_comandosBasicos_alterarTabelas"></span>
 
