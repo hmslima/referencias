@@ -38,7 +38,7 @@ tenha certeza de ter os softwares listados abaixo instalados:
 
 * Node.js *(não é obrigatório, mas é bom ter)*
 
-Baixe o Emscripten:
+Pelo terminal ou prompt de comando, entre na pasta onde você quer instalar Emscripten e baixe-o:
 
     git clone https://github.com/emscripten-core/emsdk.git
     cd emsdk
@@ -159,7 +159,7 @@ Eis os nossos arquivos:
 
 **index.html**
 
-    <DOCTYPE html>
+    <!DOCTYPE html>
     <html>
     	<head>
     		<title>Teste de Emscripten</title>
