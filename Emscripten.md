@@ -19,6 +19,8 @@
 		* [Compilação de múltiplos arquivos](#emscripten_compile_mult)
 
 	* [Como chamar código compilado do C/C++ a partir do JavaScript](#emscripten_jscalls)
+	
+	* [Inclusão condicional](#emscripten_cond)
 
 # Introdução<span id="intro"></span>
 
@@ -28,7 +30,7 @@ Leia o [README](README.md).
 
 ## Instalação<span id="emscripten_install"></span>
 
-tenha certeza de ter os softwares listados abaixo instalados:
+Tenha certeza de ter os softwares listados abaixo instalados:
 
 * Git
 
@@ -57,7 +59,7 @@ Pelo terminal ou prompt de comando, entre na pasta onde você quer instalar Emsc
     emsdk activate latest
     emsdk_env.bat
 
-Adicione as pasta onde você instalou o Emscripten ao PATH do sistema se um dos comandos anteriores não fez este trabalho.
+Adicione as pastas onde você instalou o Emscripten ao PATH do sistema se um dos comandos anteriores não fez este trabalho.
 
 No Windows 10, abra as configurações => Sistema => Sobre => Configurações avançadas do sistema => Variáveis do ambiente = *Selecione `Path`* e aperte no botão `Editar`. Você poderá seguir daqui
 
@@ -71,7 +73,7 @@ Considere `~` como o caminho para a pasta do Emscripten, por exemplo, se instalo
 
 ### Pós-instalação<span id="emscripten_install_pos"></span>
 
-Para verificar se tudo deu certo, tente rodar o comando `emcc -v`.
+Para verificar se tudo deu certo, tente rodar o comando `emcc -v`. Mas se lembre de, antes, fechar e abrir de novo o terminal ou prompt de comando.
 
 ## Compilação<span id="emscripten_compile"></span>
 
@@ -99,7 +101,7 @@ Agora vamos criar um *output* que inclui um arquivo HTML:
 
     em++ main.cpp -o index.html --emrun
 
-Muitos navegadores não permitem rodar o wasm se o endereço vem da URL `file://``. Mas não tem problemas, o próprio Emscripten nos fornece um comando para criar um servidor.
+Muitos navegadores não permitem rodar o wasm se o endereço vem da URL `file://`. Mas não tem problemas, o próprio Emscripten nos fornece um comando para criar um servidor.
 
     emrun index.html
 
@@ -229,7 +231,7 @@ Vamos brincar um pouco mais:
     		return 2;
     	}
     	
-    	char* EMSCRIPTEN_KEEPALIVE texto () {
+    	const char* EMSCRIPTEN_KEEPALIVE texto () {
     		return "Olá mundo";
     	}
     	
@@ -259,7 +261,7 @@ Vamos brincar um pouco mais:
     		<p>Abra o inspecionador do seu navegador para ver se a mensagem de console.log</p>
     		<script>
     			Module.onRuntimeInitialized = () => {
-    				var resultado1 = Module.ccall('numero', 'numer', null, null);
+    				var resultado1 = Module.ccall('numero', 'number', null, null);
     				var resultado2 = Module.ccall('texto', 'string', null, null);
     				Module.ccall('mudaVariavel', null, 'number', [5.8]);
     				var resultado3 = Module.ccall('verVariavel', 'number', null, null);
@@ -273,9 +275,9 @@ Vamos brincar um pouco mais:
     	</body>
     </html>
 
-## Inclusão condicional<span id="emscripten_"></span>
+## Inclusão condicional<span id="emscripten_cond"></span>
 
-As vezes queremos usar nosso código para outros contextos que não a compilação para WebAssembly. Por exemplo, quero reusar meu código para dektop (Linux, Windows, MacOS) ou mobile (Android, iOS). Eu poderia remover as partes referentes ao Emscripen, mas isso seria trabalho, felizmente podemos usar diretivas do C/C++ que tornam nosos código mais portável.
+As vezes queremos usar nosso código para outros contextos que não a compilação para WebAssembly. Por exemplo, quero reusar meu código para desktop *(Linux, Windows, MacOS)* ou mobile *(Android, iOS)*. Eu poderia manter diferentes versões do código, mas isso seria trabalhoso, felizmente podemos usar diretivas do C/C++ que tornam nosso código mais portável.
 
 **main.cpp**
 
