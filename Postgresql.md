@@ -50,7 +50,9 @@ Instale também o `pgadmin` *(tenha certeza de instalar também a versão web vi
 
     systemctl enable postgresql
 
-Caso você tenha acabado de instalar o PostgreSQL, você vai precisar criar um super-usuário.
+Caso você tenha acabado de instalar o PostgreSQL, você vai precisar criar um usuário.
+
+<span style="color:red;">Olha, se você vai usar o banco de dados apena spara testes, talvez seja interessante que você veja o capítulo [Conexão com o Spring](#postgres_springconnection).</span>
 
 Primeiro mude para o usuário `postgres`
 
@@ -162,10 +164,15 @@ Tive problemas para conectar o banco de dados com o Spring por conta do sistema 
 Para resolver o problema, acesse o usuário do PostgreSQL
 
     sudo su postgres
+
+Então se dirija para a o arquivo `data/`
+
     cd data
     nano pg_hba.conf
 
-De...
+Se por um acaso, você permanecer na pasta do usuário comum, você precisará pesquisar a localização da pasta do Postgres, no caso do openSUSE é `/var/lib/pgsql/`
+
+Afora vejamos o arquivo `pg_hba.conf`. Mude de...
 
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
     
@@ -187,4 +194,10 @@ De...
     # IPv6 local connections:
     host    all             all             ::1/128                 password
 
-Não se esqueça de reiniciar o servidor!
+<span style="color: red;">**Não se esqueça de reiniciar o servidor!**</span>
+
+No arquivo `application.properties`, na parte de URL, você referencia o PostgreSQL desse jeito:
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/teste
+
+No caso da linha acima, estaríamos usando um banco de dados de nome `teste` que estaria rodando na porta 5432.
