@@ -275,6 +275,88 @@ Vamos brincar um pouco mais:
     	</body>
     </html>
 
+<hr>
+
+Vamos fechar este capítulo com chave de ouro, criaremos um programinha que envia um texto do JavaScript para o código em C++ e o recebe de volta com um brinde:
+
+**palavra.cpp**
+
+    #include <emscripten.h>
+    #include <string>
+    
+    std::string brinde = ">> C++: ";
+    std::string texto;
+    
+    extern "C" {
+    
+        void EMSCRIPTEN_KEEPALIVE JSparaCPP (const char* mensagem) {
+            texto = brinde + mensagem;
+        }
+        
+        const char* EMSCRIPTEN_KEEPALIVE CPPparaJS () {
+            return texto.c_str();
+        }
+    }
+
+**index.html**
+
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Teste de Emscripten</title>
+            <script src="palavra.js"></script>
+        </head>
+        <body>
+            
+            <input type="text" id="texto" name="texto">
+            <button type="button" onclick="enviarTexto()" id="botao">»</button>
+            
+            <br>
+            
+            <p>O que você vê logo abaixo veio do código em C++</p>
+            
+            <div style="background-color: #AFFFB9;" id="onde_devolveremos_o_texto"></div>
+            
+            <script>
+                
+                var div_onde_devolveremos_o_texto = document.getElementById("onde_devolveremos_o_texto");
+                
+                function enviarTexto() {
+                    // Coleta o valor do input
+                    var texto_a_ser_enviado = String(document.getElementById("texto").value);
+                    
+                    // Envia o texto
+                    Module.ccall('JSparaCPP', null, ['string'], [texto_a_ser_enviado]);
+                    
+                    var texto_do_cpp = Module.ccall('CPPparaJS', 'string', null, null);
+                    
+                    // Aproveitamos o comando e pegamos o texto de volta que enviamos para o código em C++
+                    div_onde_devolveremos_o_texto.innerHTML = texto_do_cpp;
+                }
+                
+                // Para podermos enviar o texto teclando apenas ENTER:
+                (function () {
+                    document.addEventListener('keyup', event => {
+                        if (event.keyCode == 13) {
+                            enviarTexto();
+                        }
+                    });
+                })();
+            </script>
+        </body>
+    </html>
+
+Para que você não precise procurar o comando que compila o código C++, aqui os comandos que usei no terminal para compilar e executar o programa:
+
+    em++ palavra.cpp -o palavra.js -sEXPORTED_RUNTIME_METHODS=ccall
+
+<span></span>
+
+    emrun index.html
+
+E pela última vez eu digo isso, usei o comando `em++` porque estou trabalhando com um código em C++; se meu código fosse em C, o comando seria `emcc`.
+
 ## Inclusão condicional<span id="emscripten_cond"></span>
 
 As vezes queremos usar nosso código para outros contextos que não a compilação para WebAssembly. Por exemplo, quero reusar meu código para desktop *(Linux, Windows, MacOS)* ou mobile *(Android, iOS)*. Eu poderia manter diferentes versões do código, mas isso seria trabalhoso, felizmente podemos usar diretivas do C/C++ que tornam nosso código mais portável.

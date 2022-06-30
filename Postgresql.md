@@ -14,7 +14,7 @@
 		
 		* [Se você usa Windows](#postgres_start_windows)
 
-		* [Continuando..](#postgres_start_cont)
+		* [Continuando...](#postgres_start_cont)
 
 		* [pgadmin modo web](#postgres_start_pgadminweb)
 
