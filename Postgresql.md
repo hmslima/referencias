@@ -10,13 +10,23 @@
 
 	* [Inicialização](#postgres_start)
 
-		* [Linux](#postgres_start_linux)
+		* [Se você usa Linux](#postgres_start_linux)
+		
+		* [Se você usa Windows](#postgres_start_windows)
+
+		* [Continuando..](#postgres_start_cont)
+
+		* [pgadmin modo web](#postgres_start_pgadminweb)
 
 	* [Comparação entre MySQL e PostgreSQL](#postgres_mysql)
 
 	* [Usuários](#postgres_users)
 
 		* [Criação de usuários](#postgres_users_create)
+
+			* [Pelo terminal](#postgres_users_create_term)
+
+			* [Pelo pgAdmin](#postgres_users_create_pgadmin)
 
 		* [Lista de usuários](#postgres_users_list)
 
@@ -42,7 +52,7 @@ Instale também o `pgadmin` *(tenha certeza de instalar também a versão web vi
 
 ## Inicialização <span id="postgres_start"></span>
 
-### Linux <span id="postgres_start_linux"></span>
+### Se você usa Linux<span id="postgres_start_linux"></span>
 
     systemctl start postgresql
 
@@ -52,8 +62,6 @@ Instale também o `pgadmin` *(tenha certeza de instalar também a versão web vi
 
 Caso você tenha acabado de instalar o PostgreSQL, você vai precisar criar um usuário.
 
-<span style="color:red;">Olha, se você vai usar o banco de dados apena spara testes, talvez seja interessante que você veja o capítulo [Conexão com o Spring](#postgres_springconnection).</span>
-
 Primeiro mude para o usuário `postgres`
 
     sudo su postgres
@@ -62,21 +70,29 @@ Entre no terminal do PostgreSQL:
 
     psql
 
-Para criar usuário sem senha:
+### Se você usa Windows<span id="postgres_start_windows"></span>
 
-    CREATE ROLE <usuário> jonathan LOGIN;
+No Windows, acho mais interessante fazermos tudo pelo pgAdmin *(que seria o equivalente do Workbench)*, mas vamos deixar nosso sistema de banco de dados pronto para ser usado pelo prompt de comando, caso a gente necesside to terminal para algo.
 
-Para criar usuário com senha senha:
+Verifique antes se o PostgreSQL foi adicionado ao PATH do Windows. Antes de continuarmos, vamos convencionar que `#` representa a pasta onde o PostgreSQL foi instalado no Windows; por exemplo, se a pasta de instalação do meu PostgreSQL foi `C:\Program Files\PostgreSQL\14` *(no caso, foi a versão 14)*, então `#\data"` significaria `C:\Program Files\PostgreSQL\14\data"`.
 
-    CREATE USER <usuário> WITH PASSWORD '<senha>';
+OK, voltando ao PATH, tenha certeza de que a pasta `#\bin"` estja no PATH do sistema. Para testar se tudo está OK, tente rodar o comando abaixo:
 
-`CREATE ROLE` e `CREATE USER` são a mesma coisa, a diferença é que `CREATE USER` implica a adição de uma senha
+    pg_ctl --version
 
-OK, vamos criar o usuário que pode gerenciar bancos de dados:
+Se você conseguir ver a versão do seu PostgreSQL, significa que está tudo funcionando OK.
 
-<span style="color: red;">*Repare que no comando abaixo eu não coloquei o nome do usuário, isso é porque é interessante que você ponha o mesmo nome do usuário do sistema operacional que você está usando*</span>
+Também, ainda na parte de variáveis do sistema, mas sem ser `Path` adicione a variável `PGDATA` com o valor `#\data"`, assim poderemos usar o comando `postgres`. Veja se o comando abaixo funciona:
 
-    CREATE USER <nome_do_usuario> WITH PASSWORD '12345' CREATEDB;
+    postgres
+
+De volta ao pgAdmin
+
+### Continuando...<span id="postgres_start_cont"></span>
+
+<span style="color:red;">Olha, se você vai usar o banco de dados apena spara testes, talvez seja interessante que você veja o capítulo [Conexão com o Spring](#postgres_springconnection).</span>
+
+Vá até o capítulo [Criação de usuários](#postgres_users_create) e depois volte aqui. Fique sabendo que é importante que o usuário que você criará tenha o mesmo nome do usuário do sistema operacional onde o PostgreSQL está instalado! Por exemplo, se o nome de usuário do sistema operacional é `camila`, então o nome de usuário que você criará no PostgreSQL também tem que ser `camila`. Estamos entendidos?
 
 Para sair do terminal do PostgreSQL, você pode usar este comando:
 
@@ -92,7 +108,7 @@ Para saber qual é a porta usara pelo PostgreSQL:
 
     SHOW port;
 
-### pgadmin modo web <span id="postgres_start_pgadminweb"></span>
+### pgadmin modo web<span id="postgres_start_pgadminweb"></span>
 
 Acesse a página [http://localhost:61886/browser](http://localhost:61886/browser)
 
@@ -109,7 +125,7 @@ Acesse a página [http://localhost:61886/browser](http://localhost:61886/browser
 
 ### Criação de usuários<span id="postgres_users_create"></span>
 
-Já ensinei como criar usuários, isto aqui é só uma recapitulação. Bom, se certifique de usar um usuário com permissão para criar outros usuários:
+#### Pelo terminal<span id="postgres_users_create_term"></span>
 
 Para criar usuário sem senha:
 
@@ -128,6 +144,12 @@ Para criar usuário com senha senha e com uma permissão já definida:
 Exemplo:
 
     CREATE USER thiago WITH PASSWORD '12345' CREATEDB;
+
+#### Pelo pgAdmin<span id="postgres_users_create_pgadmin"></span>
+
+Entrando no pgAdmin, lhe será pedido senha do usuário principal *(você definiu a senha no momento da instalação)*, haverá um painel no lado esquerdo, onde você verá o item `Servers`. Expandindo-o, você verá o nome PostgreSQL mais o número da versão do mesmo, dentro deste haverá o item `Login/Group Roles`, clique com o botão direito do mouse sobre ele e selecione `Create` => `Login/Group Role`.
+
+O resto não exige muita explicação, só não se esqueça do que falei de pôr o mesmo nome do usuário do sistema operacional e na aba `Privileges` selecione tudo.
 
 ### Lista de usuários<span id="postgres_users_list"></span>
 

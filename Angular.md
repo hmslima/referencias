@@ -60,6 +60,10 @@ Para rodar o Angular, entramos na pasta onde ele se encontra e rodamos o comando
 
 4. Reconstrói o aplicativo quando a fonte é atualizada *(hot reload)*
 
+No Windows, tive problemas de permissão para rodar esse comando do `ng serve`, mas a solução é simples, qualquer problema basta usar o comando abaixo:
+
+    npm run ng serve
+
 Por padrão, o servidor roda na porta 4200. Para facilitar, podemos usar o comando `ng serve --open` que abre o navegador pra gente. Para mudar a porta, basta usar o parâmetro `--port`, por exemplo, `ng server --port 5102`
 
 Para criar um novo projeto, usamos o comando
