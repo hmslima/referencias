@@ -34,6 +34,8 @@
 
 	* [Criação de banco de dados](#postgres_db)
 
+	* [Execução de arquivos .sql](#postgres_runfile)
+
 	* [Conexão com o Spring](#postgres_springconnection)
 
 # Introdução<span id="intro"></span>
@@ -70,6 +72,10 @@ Entre no terminal do PostgreSQL:
 
     psql
 
+Ou você poderia simplesmente usar o comando:
+
+    psql -U postgres -d postgres
+
 ### Se você usa Windows<span id="postgres_start_windows"></span>
 
 No Windows, acho mais interessante fazermos tudo pelo pgAdmin *(que seria o equivalente do Workbench)*, mas vamos deixar nosso sistema de banco de dados pronto para ser usado pelo prompt de comando, caso a gente necesside to terminal para algo.
@@ -86,9 +92,13 @@ Também, ainda na parte de variáveis do sistema, mas sem ser `Path` adicione a 
 
     postgres
 
-De volta ao pgAdmin
+Para o primeiro acesso, use o comando abaixo:
+
+    psql -U postgres -d postgres
 
 ### Continuando...<span id="postgres_start_cont"></span>
+
+**Tenha isso em mente:** para acessar o PostgreSQL, você precisa também informar o banco de dados, não é como o MySQL em que você pode acessar o banco de dados depois, por isso que usamos o parâmetro `-d <banco_de_dados>`.
 
 <span style="color:red;">Olha, se você vai usar o banco de dados apena spara testes, talvez seja interessante que você veja o capítulo [Conexão com o Spring](#postgres_springconnection).</span>
 
@@ -179,22 +189,32 @@ Vamos dizer que quero criar o banco de dados `estudo`:
     CREATE DATABASE estudo;
     \c estudo
 
+## Execução de arquivos .sql<span id="postgres_runfile"></span>
+
+É bem simples:
+
+    psql -h host -p port -d dbname -U username -f datafile.sql
+
 ## Conexão com o Spring<span id="postgres_springconnection"></span>
 
 Tive problemas para conectar o banco de dados com o Spring por conta do sistema de autenticação do PostgreSQL.
 
-Para resolver o problema, acesse o usuário do PostgreSQL
+Para resolver o problema, precisamos editar o arquivo `pg_hba.conf` que fica na pasta `data`.
+
+No Linux, você pode tentar acessa o usuário do PostgreSQL...
 
     sudo su postgres
 
-Então se dirija para a o arquivo `data/`
+...para então se dirijir diretamente ao arquivo.
 
     cd data
     nano pg_hba.conf
 
 Se por um acaso, você permanecer na pasta do usuário comum, você precisará pesquisar a localização da pasta do Postgres, no caso do openSUSE é `/var/lib/pgsql/`
 
-Afora vejamos o arquivo `pg_hba.conf`. Mude de...
+No Windows, é mais fácil, é só ir na pasta de instalação do PostreSQL e procurar a pasta `data` *(o que não é difícil, na verdade você a configurou nas variáveis do sistema no início deste tutorial)*.
+
+Agora vejamos o arquivo `pg_hba.conf`. Mude de...
 
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
     
@@ -204,6 +224,8 @@ Afora vejamos o arquivo `pg_hba.conf`. Mude de...
     host    all             all             127.0.0.1/32            ident
     # IPv6 local connections:
     host    all             all             ::1/128                 ident
+
+*<span style="font-size: 0.8rem;">No Windows, em vez de `peer` e `ident`, pode ser que esteja `scram-sha-256` no lugar. Altere da mesma forma.</span>*
 
 ...para:
 
