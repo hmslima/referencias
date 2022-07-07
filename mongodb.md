@@ -24,7 +24,7 @@
 
 Leia o [README](README.md).
 
-Para eu não ter que me repetir, sugiro que você estude [SQL.md](SQL.md) antes. Sim, é outro tipo de banco de dados, mas ainda assim poupará nosso tempo na apresentação do MongoDB.
+Para eu não ter que me repetir, sugiro que você estude [SQL](SQL.md) antes. Sim, é outro tipo de banco de dados, mas ainda assim poupará nosso tempo na apresentação do MongoDB.
 
 # MongoDB<span id="mongodb"></span>
 
@@ -50,7 +50,7 @@ A porta padrão do MongoDB é 27017
 
 ## Start<span id="mongodb_start"></span>
 
-Deixe o terminal ou prompt de comando que você iniciou o servidor intacto. Abra **outro** terminal que será onde você iniciará o shell do MongoDB.
+Deixe o terminal ou prompt de comando que você iniciou o servidor de lado, não o feche ou encerre o seu processo! Abra **outro** terminal que será onde você iniciará o shell do MongoDB.
 
 Para dar o start, use o comando abaixo:
 
