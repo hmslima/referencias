@@ -64,6 +64,14 @@
 
 	* [CRUD no MongoDB](#nodejs_mongodb)
 
+		* [INSERT](#nodejs_mongodb_insert)
+
+		* [FIND](#nodejs_mongodb_find)
+
+		* [O resto](#nodejs_mongodb_resto)
+
+		* [REST APIs](#nodejs_mongodb_rest)
+
 	* [Projeto: Lista de Tarefas](#nodejs_projetotarefas)
 
 	* [Conclusão](#nodejs_conclusao)
@@ -1472,11 +1480,164 @@ Observe que na importação, também peguei o `Op`. Há várias operações que 
 
 ## CRUD no MongoDB<span id="nodejs_mongodb"></span>
 
-Sugiro que você veja meu tutorial de [MongoDB](mongodb.md)
+Sugiro que você veja meu tutorial de [MongoDB](mongodb.md).
 
-Inicie o servidor, abra o shell do MongoDB e rode os seguintes comandos:
+Inicie o servidor, abra o shell do MongoDB.
 
+E baixe o MongoDB para Node.js
 
+    npm i mongodb
+
+### INSERT<span id="nodejs_mongodb_insert"></span>
+
+    const mongodb = require('mongodb')
+    const MongoClient = mongodb.MongoClient
+    
+    const connectionURL = 'mongodb://127.0.0.1:27017'
+    const databaseName = 'teste'
+    
+    MongoClient.connect(connectionURL, {useNewUrlParser: true}, (error, client) => {
+        if (error) {
+            return console.log("Não foi possível se conectar com o banco de dados. Motivo:" + error);
+        }
+        
+        const db = client.db(databaseName) // Cria um banco de dados com esse nome se o mesmo não existir
+    
+        db.collection('Usuarios').insertOne({
+            nome: 'João',
+            idade: 15
+        })
+    
+        db.collection('Usuarios').insertOne({
+            nome: 'Thiago',
+            idade: 28
+        }, (error, result) => {
+            if (error) {
+                return console.log("Não foi possível inserir o usuário:" + error)
+            }
+        })
+    
+        db.collection('Usuarios').insertMany([
+            {
+                nome: 'Marcelino',
+                idade: 30
+            },
+            {
+                nome: 'Milena',
+                idade: 8
+            },
+            {
+                nome: 'Tatiano',
+                idade: 16
+            }
+        ], (error, result) => {
+            if (error) {
+                return console.log("Não foi possível inserir o usuário:" + error)
+            }
+        })
+    })
+
+Para inserir com os IDs definidos por nós:
+
+    const {MongoClient, ObjectId} = require('mongodb')
+    
+    const id = new ObjectId()
+    
+    console.log(id) // Compare com o que você ver no servidor
+    console.log(id.getTimestamp())
+    console.log(id.id)
+    console.log(id.id.length)
+    
+    const connectionURL = 'mongodb://127.0.0.1:27017'
+    const databaseName = 'teste'
+    
+    MongoClient.connect(connectionURL, {useNewUrlParser: true}, (error, client) => {
+        if (error) {
+            return console.log("Não foi possível se conectar com o banco de dados. Motivo:" + error);
+        }
+        
+        const db = client.db(databaseName) // Cria um banco de dados com esse nome se o mesmo não existir
+    
+        db.collection('Usuarios').insertOne({
+            _id: id,
+            nome: 'Enzo',
+            idade: 18
+        }, (error, result) => {
+            if (error) {
+                return console.log("Não foi possível inserir o usuário:" + error)
+            }
+        })
+    })
+
+### FIND<span id="nodejs_mongodb_find"></span>
+
+    const {MongoClient, ObjectId} = require('mongodb')
+    
+    const connectionURL = 'mongodb://127.0.0.1:27017'
+    const databaseName = 'teste'
+    
+    MongoClient.connect(connectionURL, {useNewUrlParser: true}, (error, client) => {
+        if (error) {
+            return console.log("Não foi possível se conectar com o banco de dados. Motivo:" + error);
+        }
+        
+        const db = client.db(databaseName) // Cria um banco de dados com esse nome se o mesmo não existir
+    
+        db.collection('Usuarios').findOne({nome: 'Milena'}, (error, usuario) => {
+            if (error) {
+                return console.log("Não foi possível recuperar o usuário:" + error)
+            }
+            console.log(usuario)
+            console.log("-----------------------")
+        })
+    
+        db.collection('Usuarios').find({idade: {$gte: 20}}).toArray((error, usuario) => {
+            if (error) {
+                return console.log("Não foi possível recuperar o usuário:" + error)
+            }
+            console.log(usuario)
+        })
+    })
+
+### O resto<span id="nodejs_mongodb_resto"></span>
+
+O resto você pode consultar na [documentação](https://mongodb.github.io/node-mongodb-native/)...
+
+### REST APIs<span id="nodejs_mongodb_rest"></span>
+
+Conheça o projeto [Mongoose](https://mongoosejs.com/).
+
+    npm i mongoose
+
+Vamos nos conectar ao banco de dados e criar um documento:
+
+    const mongoose = require('mongoose')
+    
+    mongoose.connect('mongodb://127.0.0.1:27017/teste', {
+                    useNewUrlParser: true
+    })
+    
+    const Usuario = mongoose.model('Usuario', { // Mongoose automaticamente criará a coleção usuarios (sim, já com o -s no final)
+        nome: {
+            type: String
+        },
+        idade: {
+            type: Number
+        }
+    })
+    
+    const juliana = new Usuario({
+        nome: 'Juliana',
+        idade: 30
+    })
+    
+    juliana.save().then(() => {
+        console.log(juliana)
+    }).catch((error)=> {
+        console.log(error)
+    })
+
+Vou parar por aqui porque o maior foco será nos bancos de dados relacionais. Se você quiser mais informações, pesquise por si só.
 
 ## Projeto: Lista de Tarefas<span id="nodejs_projetotarefas"></span>
 
