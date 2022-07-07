@@ -175,6 +175,8 @@ A partir de agora inseriremos alguns dados na nossa coleção:
         ordered: false
     })
 
+<span></span>
+
 Agora podemos visualizar nossos dados:
 
     db.estudante.find()
@@ -190,6 +192,14 @@ Se quisermos ver só quem tem 13 anos:
 Se quisermos ver só quem tem idade superior a 13 anos:
 
     db.estudante.find({idade: {$gt:13}})
+
+Agora vamos usar mais dois comandos:
+
+    db.estudante.save({nome: "Diogo", idade: 13})
+
+O segundo comando é com você, substitua o `<id_do_estudante>` abaixo pelo id correspondente de um estudante que você queira substituir:
+
+    db.estudante.save({_id: ObjectId("<id_do_estudante>"), nome: "Tatiana", idade: 14})
 
 ## Drivers<span id="mongodb_drivers"></span>
 
