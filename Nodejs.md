@@ -74,6 +74,8 @@
 
 	* [Projeto: Lista de Tarefas](#nodejs_projetotarefas)
 
+	* [Projeto: REST API com Express.js e PostgreSQL](#nodejs_projetoapi)
+
 	* [Conclusão](#nodejs_conclusao)
 
 # Introdução<span id="intro"></span>
@@ -1917,6 +1919,148 @@ Os valores (`name`) de umformulário serão "capturados" por `req.body`.
     res.redirect('/');
 
 Bem óbvio, né? Redireciona para a rota estabelecida no parâmetro desse método.
+
+## Projeto: REST API com Express.js e PostgreSQL<span id="nodejs_projetoapi"></span>
+
+Tenha certeza que o servidor PostgreSQL está ativo e devidamente configurado.
+
+Crie uma pasta onde você criará seu projeto e faça as configurações iniciais com o NPM
+
+    npm init -y
+    npm i express pg dotenv
+
+**bd.sql**
+
+    \c teste;
+    
+    CREATE TABLE users (
+        user_id SERIAL PRIMARY KEY,
+        user_name VARCHAR(255) UNIQUE NOT NULL
+    );
+    
+    CREATE TABLE todos (
+        todo_id SERIAL PRIMARY KEY,
+        todo_description TEXT NOT NULL,
+        todo_done BOOLEAN NOT NULL,
+        user_id INT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+    );
+    
+    INSERT INTO users (user_name) VALUES ('Marcelino');
+    INSERT INTO users (user_name) VALUES ('Cláudia');
+    INSERT INTO users (user_name) VALUES ('João'); 
+
+**.env**
+
+    POSTGRES_URL = postgres://meunome:12345@localhost:5432/teste
+
+**src/index.js**
+
+    const express = require('express')
+    const { Pool } = require('pg')
+    require('dotenv').config()
+    
+    const app = express()
+    
+    const PORT = 3333
+    
+    const pool = new Pool({
+        connectionString: process.env.POSTGRES_URL
+    })
+    
+    app.use(express.json())
+    
+    app.get('/', function (req, res) {
+        res.send("Página inicial")
+    })
+    
+    app.get('/users', async (req, res) => {
+        try {
+            const { rows } = await pool.query('SELECT * FROM users')
+            return res.status(200).send(rows)
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    })
+    
+    app.post('/session', async (req, res) => {
+        const { username } = req.body
+    
+        let user = ''
+    
+        try {
+            user = await pool.query('SELECT * FROM users WHERE user_name = ($1)', [username])
+            if (!user.rows[0]) {
+                // Esse RETURNING * é só para que quando usarmos o Postman ou programa parecido, volte pra gente o que inserimos
+                const user = await pool.query('INSERT INTO users (user_name) VALUES ($1) RETURNING *', [username])
+            }
+            return res.status(200).send(user.rows)
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    
+    })
+    
+    app.get('/todo/:user_id', async (req, res) => {
+        const { user_id } = req.params
+        try {
+            const allTodos = await pool.query('SELECT * FROM todos WHERE user_id = ($1)', [user_id])
+            return res.status(200).send(allTodos.rows)
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    })
+    
+    app.post('/todo/:user_id', async (req, res) => {
+        const { description, done } = req.body
+        const { user_id } = req.params
+        try {
+            const newTodo = await pool.query('INSERT INTO todos (todo_description, todo_done, user_id) VALUES ($1, $2, $3) RETURNING *', [description, done, user_id])
+            return res.status(200).send(newTodo.rows)
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    })
+    
+    app.patch('/todo/:user_id/:todo_id', async (req, res) => {
+        const { todo_id, user_id } = req.params
+        const data = req.body
+        try {
+            const belongsTo = await pool.query('SELECT * FROM todos WHERE user_id = ($1) AND todo_id = ($2)', [user_id, todo_id])
+            if (!belongsTo.rows[0]) {
+                return res.status(400).send("Operação não permitida")
+            }
+            const updatedTodo = await pool.query('UPDATE todos SET todo_description = ($1), todo_done = ($2) WHERE todo_id = ($3) RETURNING *', [data.description, data.done, todo_id])
+            return res.status(200).send(updatedTodo.rows)
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    })
+    
+    app.delete('/todo/:user_id/:todo_id', async (req, res) => {
+        const { todo_id, user_id } = req.params
+        try {
+            const belongsTo = await pool.query('SELECT * FROM todos WHERE user_id = ($1) AND todo_id = ($2)', [user_id, todo_id])
+            if (!belongsTo.rows[0]) {
+                return res.status(400).send("Operação não permitida")
+            }
+            const deletedTodo = await pool.query('DELETE FROM todos WHERE todo_id = ($1) RETURNING *', [ todo_id])
+            return res.status(200).send({
+                message: "TODO deletado com sucesso",
+                deletedTodo: deletedTodo.rows
+            })
+        }
+        catch (err) {
+            return res.status(400).send(err)
+        }
+    })
+    
+    app.listen(PORT, () => console.log(`Server running on the port ${PORT}`))
 
 ## Conclusão<span id="nodejs_conclusao"></span>
 
