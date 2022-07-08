@@ -408,6 +408,58 @@ Outras *flags* são a `--save-optional` e `--no-save`, em que a primeira informa
 
 Por fim, temos a *flag* `--global`, esta em vez de instalar o módulo de forma local, instalará o módulo no sistema, é por isso que, durante a sua instalação, será pedido um usuário privilegiado para instalar o módulo, como se você estivesse instalando um programa comum no seu sistema operacional.
 
+## CommonJS vs módulos EMCAScript<span id="nodejs_commonjsvsesmodules"></span>
+
+No ecossistema do navegador, são usadas as palavras chaves `import` e `export` para importar e exporat módulos. Já o Node.js usa o CommonJS para carregar os módulos, como você viu com `require()` e `module.exports`.
+
+Vejamos um exemplo usando o CommonJS que você já conhece:
+
+**utilidades.js**
+
+    const {somar} = require('./utilidades')
+    
+    console.log(somar(2,3))
+
+**index.js**
+
+    const {somar} = require('./utilidades')
+    
+    console.log(somar(2,3))
+
+Agora vamos usar o modo do EMCAScript. Há duas maneiras: ou mudamos a extensão dos arquivos de `.js` mapa `.mjs`, ou mantemos as extensões `.js`, mas adicionamos `{"type": "module"}` no arquivo `package.json`, o exemplo a seguir segue essa segunda maneira.
+
+**package.json**
+
+    {
+      "name": "delete",
+      "version": "1.0.0",
+      "type": "module",
+      "description": "",
+      "main": "index.js",
+      "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+      },
+      "keywords": [],
+      "author": "",
+      "license": "ISC"
+    }
+
+*Repare no `"type": "module"` que adicionei manualmente*
+
+**utilidades.js**
+
+    export function somar(a, b) {
+        return a + b;
+    }
+
+**index.js**
+
+    import {somar} from './utilidades.js'
+    
+    console.log(somar(2,3))
+
+*De novo, se usássemos as extensões `.mjs` no lugar de `.js`, não precisaríamos configurar o arquivo `package.json`*
+
 ## Manipulação de JSON<span id="nodejs_json"></span>
 
     const fs = require('fs');
