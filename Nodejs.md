@@ -110,6 +110,10 @@ Abra seu arquivo `pacjage.json`, ele estará mais ou menos assim:
 
 É interessante que seu arquivo .js principal esteja com o nome indicado por `"main":`, que no caso aqui é `index.js`, mas poderia ser `main.js.`
 
+Olha, antes de continuarmos, se você é usuário de Windows, fica sabendo que você poderá ter problemas para executar scripts de terceitos baixados pelo Node.js, como os comandos `ng` do Angular. Para resolver o problema, rode o comando abaixo:
+
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 ## Hello World<span id="nodejs_primeiroservidor"></span>
 
 Vamos criar o exemplo mais simples possível:
@@ -1980,6 +1984,8 @@ Crie uma pasta onde você criará seu projeto e faça as configurações iniciai
 
     npm init -y
     npm i express pg dotenv
+
+Não se esqueça de criar o arquivo `.gitignore` para que você não acabe enviando `node_modules` e principalmente `.env` para o GitHub ou seja lá qual servidor.
 
 **bd.sql**
 

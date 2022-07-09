@@ -36,6 +36,10 @@ Para instalar o Angular, rode o seguinte comando:
 
 <span style="color: red;">*Se você usa Linux, não se esqueça de adiconar o `sudo`*</span>
 
+No Windows, você poderá ter problemas para executar scripts de terceitos. Para resolver o problema, abra o Powershell *(Powershell, não o prompt de comando)* e rode o comando abaixo:
+
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 ## O básico<span id="angular_basic"></span>
 
 Pronto, para ver a versão instalada, use o comando:
