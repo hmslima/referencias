@@ -148,7 +148,7 @@
 
 	* [Logout](#springsecurit_logout)
 
-	* [*Cross Site Request Forgery*](#springsecurit_csrf)
+	* *[Cross Site Request Forgery](#springsecurit_csrf)*
 
 	* [Id de usuário e *role*](#springsecurit_userroles)
 
@@ -227,6 +227,8 @@
 	* [Projeto completo CRUD: Thymeleaf + Spring Boot](#thymeleaf_crudfinal)
 
 * [BÔNUS: Calculadora](#calculator)
+
+* [BÔNUS: RPC API](#rpc)
 
 # Introdução<span id="intro"></span>
 
@@ -16404,7 +16406,7 @@ No Postman, use este *body* abaixo, no método POST, para o link `http://localho
         "num41" : 6.3
     }
 
-# BÔNUS: RPC API<span id="calculator"></span>
+# BÔNUS: RPC API<span id="rpc"></span>
 
 O que muita gente chama de REST API *(e a maior parte do que fizemos até agora...)* são [RPC](https://pt.wikipedia.org/wiki/Chamada_de_procedimento_remoto).
 
