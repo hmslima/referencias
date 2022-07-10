@@ -16403,3 +16403,466 @@ No Postman, use este *body* abaixo, no método POST, para o link `http://localho
         "num3" : 1.0,
         "num41" : 6.3
     }
+
+# BÔNUS: RPC API<span id="calculator"></span>
+
+O que muita gente chama de REST API *(e a maior parte do que fizemos até agora...)* são [RPC](https://pt.wikipedia.org/wiki/Chamada_de_procedimento_remoto).
+
+O que você verá agora não é muito diferente do que vimos, mas este é bem interessante:
+
+**SQL**
+
+    CREATE TABLE aluno (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        sobrenome VARCHAR(255) NOT NULL,
+        ano INT NOT NULL
+    );
+    
+    CREATE TABLE atividade (
+        id SERIAL PRIMARY KEY,
+        aluno_id INT NOT NULL,
+        descricao VARCHAR(255) NOT NULL,
+        CONSTRAINT aluno_id FOREIGN KEY (aluno_id) REFERENCES aluno(id)
+    );
+    
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('João', 'Macedo', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Paula', 'Cristina', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Ricardo', 'Andrade', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Amélia', 'Duarte', '6');
+    
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (2, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (4, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Dança na rua');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Dança na rua');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (2, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (4, 'Resolução de quebra-cabeças');
+
+*Se você estiver no Windows, use o pgAdmin.*
+
+Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver e Spring data JPA.
+
+**application.properties**
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/<banco_de_dados>
+    spring.datasource.username=<usuário>
+    spring.datasource.password=<senha>
+
+Crie o pacote `entity` com as seguintes classes:
+
+**Aluno.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import javax.persistence.*;
+    import java.util.List;
+    
+    @Entity
+    @Table(name="aluno")
+    public class Aluno {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @Column(name="nome")
+        private String nome;
+    
+        @Column(name="sobrenome")
+        private String sobrenome;
+    
+        @Column(name="ano")
+        private int ano;
+    
+        @OneToMany(mappedBy = "aluno",
+                   fetch = FetchType.LAZY)
+        private List<Atividade> atividades;
+    
+        public Aluno() {
+        }
+    
+        public Aluno(String nome, String sobrenome, int ano, List<Atividade> atividades) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.ano = ano;
+            this.atividades = atividades;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public int getAno() {
+            return ano;
+        }
+    
+        public void setAno(int ano) {
+            this.ano = ano;
+        }
+    
+        public List<Atividade> getAtividades() {
+            return atividades;
+        }
+    
+        public void setAtividades(List<Atividade> atividades) {
+            this.atividades = atividades;
+        }
+    }
+
+**Atividade.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import com.fasterxml.jackson.annotation.JsonIgnore;
+    
+    import javax.persistence.*;
+    
+    @Entity
+    @Table(name="atividade")
+    public class Atividade {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @ManyToOne
+        @JoinColumn(name="aluno_id")
+        @JsonIgnore // Sem esta linha, geraria um loop infinito, repetição/repetições infinita. Ou era isso ou deveria usar DTOs
+        private Aluno aluno;
+    
+        @Column(name="descricao")
+        private String descricao;
+    
+        public Atividade () {
+        }
+    
+        public Atividade(Aluno aluno, String descricao) {
+            this.aluno = aluno;
+            this.descricao = descricao;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public Aluno getAluno() {
+            return aluno;
+        }
+    
+        public void setAluno(Aluno aluno) {
+            this.aluno = aluno;
+        }
+    
+        public String getDescricao() {
+            return descricao;
+        }
+    
+        public void setDescricao(String descricao) {
+            this.descricao = descricao;
+        }
+    }
+
+Crie o pacote `repository` com as seguintes interfaces:
+
+**AlunoRepository.java**
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface AlunoRepository extends JpaRepository<Aluno, Long>{
+
+    }
+
+**AtividadeRepository.java**
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Atividade;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface AtividadeRepository extends JpaRepository<Atividade, Long> {
+    }
+
+Crie o pacote `service` com as seguintes classes:
+
+**AlunoService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.exception.AlunoNotFoundExeption;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    
+    import org.springframework.stereotype.Service;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.Optional;
+    
+    @Service
+    @Transactional
+    public class AlunoService {
+    
+        private AlunoRepository alunoRepository;
+    
+        @Autowired
+        public AlunoService(AlunoRepository alunoRepository) {
+            this.alunoRepository = alunoRepository;
+        }
+    
+        public Aluno findAluno(Long id) {
+            return alunoRepository.findById(id).orElseThrow(() -> new AlunoNotFoundExeption(id));
+        }
+    
+        public List<Aluno> findAllAlunos() {
+            return alunoRepository.findAll();
+        }
+    
+        public Aluno addAluno(Aluno aluno) {
+    
+            aluno.setId(0L);
+            return alunoRepository.save(aluno);
+        }
+    
+        public Aluno updateAluno(Aluno aluno) {
+            return alunoRepository.save(aluno);
+        }
+    
+        public void deleteAluno(Long id) {
+            alunoRepository.deleteById(id);
+        }
+    }
+
+**AtividadeService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.entity.Atividade;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import br.com.hmslima.escola.repository.AtividadeRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.stereotype.Service;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.Optional;
+    
+    @Service
+    @Transactional
+    public class AtividadeService {
+    
+        private AlunoRepository alunoRepository;
+        private AtividadeRepository atividaRepository;
+    
+        @Autowired
+        public AtividadeService(AlunoRepository alunoRepository, AtividadeRepository atividaRepository) {
+            this.alunoRepository = alunoRepository;
+            this.atividaRepository = atividaRepository;
+        }
+    
+        public List<Atividade> findAtividades(Long aluno_id) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+    
+            return aluno.get().getAtividades();
+        }
+    
+        public ResponseEntity<Object> addAtividade(Long aluno_id, Atividade atividade) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+    
+            atividade.setAluno(aluno.get());
+    
+            atividaRepository.save(atividade);
+    
+            if (aluno.isPresent()) {
+                return ResponseEntity.accepted().body("Atividade adicionada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno não encontrado");
+            }
+        }
+    
+        public ResponseEntity<Object> updateAtividade(Long aluno_id, Long atividade_id, Atividade atividade) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+    
+            if (aluno.isPresent()) {
+    
+                List<Atividade> atividades = aluno.get().getAtividades();
+    
+                atividade.setId(atividade_id);
+                atividade.setAluno(aluno.get());
+    
+                boolean fazParte = false;
+    
+                for (Atividade atividadeTemp : atividades) {
+                    if (atividadeTemp.getId().equals(atividade_id)) {
+                        fazParte = true;
+                    }
+                }
+    
+                if (fazParte) {
+                    atividaRepository.save(atividade);
+                }
+                else {
+                    return ResponseEntity.unprocessableEntity().body("Atividade não encontrada");
+                }
+    
+                return ResponseEntity.accepted().body("Atividade atualizada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno não encontrado");
+            }
+        }
+    
+        public ResponseEntity<Object> deleteAtividade(Long aluno_id, Long atividade_id) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+            List<Atividade> atividades = aluno.get().getAtividades();
+            boolean sucesso = false;
+    
+            for (Atividade atividadeTemp : atividades) {
+                if (atividadeTemp.getId().equals(atividade_id)) {
+                    atividaRepository.deleteById(atividade_id);
+                    sucesso = true;
+                }
+            }
+    
+            if (sucesso) {
+                return ResponseEntity.accepted().body("Atividade deletada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno ou atividade não existe");
+            }
+        }
+    }
+
+Crie o pacote `exception` e crie a classe:
+
+**AlunoNotFoundExeption.java**
+
+    package br.com.hmslima.escola.exception;
+    
+    public class AlunoNotFoundExeption extends RuntimeException{
+    
+        public AlunoNotFoundExeption(Long id) {
+            super("Não foi possível encontrar o aluno " + id);
+        }
+    }
+
+Crie o pacote `controller` e crie a classe:
+
+**AlunoController.java**
+
+    package br.com.hmslima.escola.controller;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.entity.Atividade;
+    import br.com.hmslima.escola.service.AlunoService;
+    import br.com.hmslima.escola.service.AtividadeService;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @RestController
+    @CrossOrigin
+    @RequestMapping("/api/alunos")
+    public class AlunoController {
+    
+        private AlunoService alunoService;
+        private AtividadeService atividadeService;
+    
+        public AlunoController(AlunoService alunoService, AtividadeService atividadeService) {
+            this.alunoService = alunoService;
+            this.atividadeService = atividadeService;
+        }
+    
+        @GetMapping("/find/{id}")
+        public ResponseEntity<Aluno> findAluno(@PathVariable("id") Long id) {
+            Aluno aluno = alunoService.findAluno(id);
+            return new ResponseEntity<>(aluno, HttpStatus.OK);
+        }
+    
+        @GetMapping("/all")
+        public ResponseEntity<List<Aluno>> findAllAlunos() {
+            List<Aluno> alunos = alunoService.findAllAlunos();
+            return new ResponseEntity<>(alunos, HttpStatus.OK);
+        }
+    
+        @PostMapping("/add")
+        public ResponseEntity<Aluno> addAluno(@RequestBody Aluno aluno) {
+            Aluno newAluno = alunoService.addAluno(aluno);
+            return new ResponseEntity<>(newAluno, HttpStatus.CREATED);
+        }
+    
+        @PutMapping("/update")
+        public ResponseEntity<Aluno> updateAluno(@RequestBody Aluno aluno) {
+            Aluno updatedAluno = alunoService.updateAluno(aluno);
+            return new ResponseEntity<>(updatedAluno, HttpStatus.OK);
+        }
+    
+        @DeleteMapping("/delete/{id}")
+        public ResponseEntity<?> deleteAluno(@PathVariable("id") Long id) {
+            alunoService.deleteAluno(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    
+        @GetMapping("/{id}/atividades/all")
+        public ResponseEntity<List<Atividade>> findAtividades(@PathVariable("id") Long id) {
+            List<Atividade> atividades = atividadeService.findAtividades(id);
+            return new ResponseEntity<>(atividades, HttpStatus.OK);
+        }
+    
+        @PostMapping("/{id}/atividades/add")
+        public ResponseEntity addAtividade(@PathVariable("id") Long id, @RequestBody Atividade atividade) {
+            return atividadeService.addAtividade(id, atividade);
+        }
+    
+        @PutMapping("/{id}/atividades/update/{a_id}")
+        public ResponseEntity addAtividade(@PathVariable("id") Long id,
+                                           @PathVariable("a_id") Long a_id,
+                                           @RequestBody Atividade atividade) {
+            return atividadeService.updateAtividade(id, a_id, atividade);
+        }
+    
+        @DeleteMapping("/{id}/atividades/delete/{a_id}")
+        public ResponseEntity deleteAtividade(@PathVariable("id") Long id, @PathVariable("a_id") Long a_id) {
+            return atividadeService.deleteAtividade(id, a_id);
+        }
+    }

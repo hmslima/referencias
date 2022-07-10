@@ -78,11 +78,13 @@ Ou você poderia simplesmente usar o comando:
 
 ### Se você usa Windows<span id="postgres_start_windows"></span>
 
-No Windows, acho mais interessante fazermos tudo pelo pgAdmin *(que seria o equivalente do Workbench)*, mas vamos deixar nosso sistema de banco de dados pronto para ser usado pelo prompt de comando, caso a gente necesside to terminal para algo.
+*Me referirei ao prompt de comando e Powershell como "terminal"*
+
+No Windows, acho mais interessante fazermos tudo pelo pgAdmin *(que seria o equivalente do Workbench)*, <span style="color: red;">ESPECIALMENTE PORQUE O TERMINAL DO WINDOWS CORREMPE CARACTERES ESPECIAIS ADICIONADOS AO BANCO DE DADOS</span>.
 
 Verifique antes se o PostgreSQL foi adicionado ao PATH do Windows. Antes de continuarmos, vamos convencionar que `#` representa a pasta onde o PostgreSQL foi instalado no Windows; por exemplo, se a pasta de instalação do meu PostgreSQL foi `C:\Program Files\PostgreSQL\14` *(no caso, foi a versão 14)*, então `#\data"` significaria `C:\Program Files\PostgreSQL\14\data"`.
 
-OK, voltando ao PATH, tenha certeza de que a pasta `#\bin"` estja no PATH do sistema. Para testar se tudo está OK, tente rodar o comando abaixo:
+OK, voltando ao PATH, tenha certeza de que a pasta `#\bin"` estja no PATH do sistema. Para testar se tudo está OK, tente rodar o comando abaixo no terminal:
 
     pg_ctl --version
 
