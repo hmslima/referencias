@@ -230,6 +230,8 @@
 
 * [BÔNUS: RPC API](#rpc)
 
+	* [Usando DTOs em vez de @JsonIgnore ou anotações similares](#rpc_dto)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -16848,6 +16850,647 @@ Crie o pacote `controller` e crie a classe:
         @GetMapping("/{id}/atividades/all")
         public ResponseEntity<List<Atividade>> findAtividades(@PathVariable("id") Long id) {
             List<Atividade> atividades = atividadeService.findAtividades(id);
+            return new ResponseEntity<>(atividades, HttpStatus.OK);
+        }
+    
+        @PostMapping("/{id}/atividades/add")
+        public ResponseEntity addAtividade(@PathVariable("id") Long id, @RequestBody Atividade atividade) {
+            return atividadeService.addAtividade(id, atividade);
+        }
+    
+        @PutMapping("/{id}/atividades/update/{a_id}")
+        public ResponseEntity addAtividade(@PathVariable("id") Long id,
+                                           @PathVariable("a_id") Long a_id,
+                                           @RequestBody Atividade atividade) {
+            return atividadeService.updateAtividade(id, a_id, atividade);
+        }
+    
+        @DeleteMapping("/{id}/atividades/delete/{a_id}")
+        public ResponseEntity deleteAtividade(@PathVariable("id") Long id, @PathVariable("a_id") Long a_id) {
+            return atividadeService.deleteAtividade(id, a_id);
+        }
+    }
+
+## Usando DTOs em vez de @JsonIgnore ou anotações similares<span id="rpc_dto"></span>
+
+Como mudei muita coisa, vou postar o código completo aqui:
+
+**SQL**
+
+    CREATE TABLE aluno (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        sobrenome VARCHAR(255) NOT NULL,
+        ano INT NOT NULL
+    );
+    
+    CREATE TABLE atividade (
+        id SERIAL PRIMARY KEY,
+        aluno_id INT NOT NULL,
+        descricao VARCHAR(255) NOT NULL,
+        CONSTRAINT aluno_id FOREIGN KEY (aluno_id) REFERENCES aluno(id)
+    );
+    
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('João', 'Macedo', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Paula', 'Cristina', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Ricardo', 'Andrade', '6');
+    INSERT INTO aluno (nome, sobrenome, ano) VALUES ('Amélia', 'Duarte', '6');
+    
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (2, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (4, 'Pintura de bonecos');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Dança na rua');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Dança na rua');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (1, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (2, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (3, 'Resolução de quebra-cabeças');
+    INSERT INTO atividade (aluno_id, descricao) VALUES (4, 'Resolução de quebra-cabeças');
+
+*Se você estiver no Windows, use o pgAdmin.*
+
+Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver e Spring data JPA.
+
+**application.properties**
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/<banco_de_dados>
+    spring.datasource.username=<usuário>
+    spring.datasource.password=<senha>
+
+Crie o pacote `entity` com as seguintes classes:
+
+**Aluno.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import br.com.hmslima.escola.dto.AlunoDTO;
+    import br.com.hmslima.escola.dto.AtividadeDTO;
+    
+    import javax.persistence.*;
+    import java.util.ArrayList;
+    import java.util.List;
+    
+    @Entity
+    @Table(name="aluno")
+    public class Aluno {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @Column(name="nome")
+        private String nome;
+    
+        @Column(name="sobrenome")
+        private String sobrenome;
+    
+        @Column(name="ano")
+        private int ano;
+    
+        @OneToMany(mappedBy = "aluno",
+                   fetch = FetchType.LAZY)
+        private List<Atividade> atividades;
+    
+        public Aluno() {
+        }
+    
+        public Aluno(String nome, String sobrenome, int ano, List<Atividade> atividades) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.ano = ano;
+            this.atividades = atividades;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public int getAno() {
+            return ano;
+        }
+    
+        public void setAno(int ano) {
+            this.ano = ano;
+        }
+    
+        public List<Atividade> getAtividades() {
+            return atividades;
+        }
+    
+        public void setAtividades(List<Atividade> atividades) {
+            this.atividades = atividades;
+        }
+    
+        public AlunoDTO getDTO() {
+    
+            List<AtividadeDTO> atividadesTempList = new ArrayList<>();
+            if (this.atividades != null) {
+                for (Atividade atividade : atividades) {
+                    AtividadeDTO atividadeTemp = new AtividadeDTO();
+    
+                    atividadeTemp.setId(atividade.getId());
+                    atividadeTemp.setDescricao(atividade.getDescricao());
+    
+                    atividadesTempList.add(atividadeTemp);
+                }
+            }
+    
+            return new AlunoDTO(this.id, this.nome, this.sobrenome, this.ano, atividadesTempList);
+        }
+    }
+
+**Atividade.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import br.com.hmslima.escola.dto.AtividadeDTO;
+    
+    import javax.persistence.*;
+    
+    @Entity
+    @Table(name="atividade")
+    public class Atividade {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @ManyToOne
+        @JoinColumn(name="aluno_id")
+        private Aluno aluno;
+    
+        @Column(name="descricao")
+        private String descricao;
+    
+        public Atividade () {
+        }
+    
+        public Atividade(Aluno aluno, String descricao) {
+            this.aluno = aluno;
+            this.descricao = descricao;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public Aluno getAluno() {
+            return aluno;
+        }
+    
+        public void setAluno(Aluno aluno) {
+            this.aluno = aluno;
+        }
+    
+        public String getDescricao() {
+            return descricao;
+        }
+    
+        public void setDescricao(String descricao) {
+            this.descricao = descricao;
+        }
+    
+        public AtividadeDTO getDTO() {
+            return new AtividadeDTO(this.getId(), this.getDescricao());
+        }
+    }
+
+Aqui vem a principal novidade, adicione o pacote `dto` e dentro dele crie as seguintes classes:
+
+**AlunoDTO.java**
+
+    package br.com.hmslima.escola.dto;
+    
+    import java.util.List;
+    
+    public class AlunoDTO {
+    
+        // Se quiséssemos, poderíamos omitir uma coisa, geralmente é isso que se faz, para não expor todos os dados
+        private Long id;
+        private String nome;
+        private String sobrenome;
+        private int ano;
+        private List<AtividadeDTO> atividades;
+    
+        public AlunoDTO() {}
+    
+        public AlunoDTO(Long id, String nome, String sobrenome, int ano, List<AtividadeDTO> atividades) {
+            this.id = id;
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.ano = ano;
+            this.atividades = atividades;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public int getAno() {
+            return ano;
+        }
+    
+        public void setAno(int ano) {
+            this.ano = ano;
+        }
+    
+        public List<AtividadeDTO> getAtividades() {
+            return atividades;
+        }
+    
+        public void setAtividades(List<AtividadeDTO> atividades) {
+            this.atividades = atividades;
+        }
+    }
+
+**AtividadeDTO.java**
+
+package br.com.hmslima.escola.dto;
+
+    public class AtividadeDTO {
+
+    // Se quiséssemos, poderíamos omitir uma coisa, geralmente é isso que se faz, para não expor todos os dados
+    // Repare que omiti o Getter do Aluno
+    private Long id;
+    private String descricao;
+
+    private AlunoDTO aluno;
+
+    public AtividadeDTO() {}
+
+    public AtividadeDTO(Long id, String descricao) {
+        this.id = id;
+        this.descricao = descricao;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
+    }
+
+    public void setAluno(AlunoDTO aluno) {
+        this.aluno = aluno;
+    }
+}
+
+Crie o pacote `repository` com as interfaces:
+
+**AlunoRepository.java**
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface AlunoRepository extends JpaRepository<Aluno, Long>{
+
+    }
+
+**AtividadeRepository.java**
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Atividade;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface AtividadeRepository extends JpaRepository<Atividade, Long> {
+    }
+
+Crie o pacote `exception` com a classe:
+
+**AlunoNotFoundExeption.java**
+
+    package br.com.hmslima.escola.exception;
+    
+    public class AlunoNotFoundExeption extends RuntimeException{
+    
+        public AlunoNotFoundExeption(Long id) {
+            super("Não foi possível encontrar o aluno " + id);
+        }
+    }
+
+Crie o pacote `service` com as classes:
+
+**AlunoService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.dto.AlunoDTO;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.exception.AlunoNotFoundExeption;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    
+    import org.springframework.stereotype.Service;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.stream.Collectors;
+    
+    @Service
+    @Transactional
+    public class AlunoService {
+    
+        private AlunoRepository alunoRepository;
+    
+        @Autowired
+        public AlunoService(AlunoRepository alunoRepository) {
+            this.alunoRepository = alunoRepository;
+        }
+    
+        public AlunoDTO findAluno(Long id) {
+            //return alunoRepository.findById(id).map(this::convertEntitytoDto).orElseThrow(() -> new AlunoNotFoundExeption(id));
+            Aluno aluno = alunoRepository.findById(id).orElseThrow(() -> new AlunoNotFoundExeption(id));
+            return aluno.getDTO();
+        }
+    
+        public List<AlunoDTO> findAllAlunos() {
+            //return alunoRepository.findAll().stream().map(this::convertEntitytoDto).collect(Collectors.toList());
+            List<Aluno> alunos = alunoRepository.findAll();
+            List<AlunoDTO> alunosDTO = alunos.stream().map(Aluno::getDTO).collect(Collectors.toList());
+    
+            return alunosDTO;
+        }
+    
+        public AlunoDTO addAluno(Aluno aluno) {
+    
+            var savedAluno = alunoRepository.save(aluno);
+    
+            return savedAluno.getDTO();
+        }
+    
+        public AlunoDTO updateAluno(Aluno aluno) {
+    
+            var updatedAluno = alunoRepository.save(aluno);
+    
+            return updatedAluno.getDTO();
+        }
+    
+        public void deleteAluno(Long id) {
+            alunoRepository.deleteById(id);
+        }
+    
+        // Mantive o trecho de código abaixo para você ver que pode resolver o mesmo problema de diferentes maneiras
+        /*private AlunoDTO convertEntitytoDto(Aluno aluno) {
+            AlunoDTO alunoDTO = new AlunoDTO();
+    
+            List<AtividadeDTO> atividadesTempList = new ArrayList<>();
+            for (Atividade atividade : aluno.getAtividades()) {
+                AtividadeDTO atividadeTemp = new AtividadeDTO();
+    
+                atividadeTemp.setId(atividade.getId());
+                atividadeTemp.setDescricao(atividade.getDescricao());
+    
+                atividadesTempList.add(atividadeTemp);
+            }
+    
+            alunoDTO.setId(aluno.getId());
+            alunoDTO.setNome(aluno.getNome());
+            alunoDTO.setSobrenome(aluno.getSobrenome());
+            alunoDTO.setAno(aluno.getAno());
+            alunoDTO.setAtividades(atividadesTempList);
+    
+            return alunoDTO;
+        }*/
+    }
+
+**AtividadeService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.dto.AlunoDTO;
+    import br.com.hmslima.escola.dto.AtividadeDTO;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.entity.Atividade;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import br.com.hmslima.escola.repository.AtividadeRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.stereotype.Service;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.Optional;
+    
+    @Service
+    @Transactional
+    public class AtividadeService {
+    
+        private AlunoRepository alunoRepository;
+        private AtividadeRepository atividaRepository;
+    
+        @Autowired
+        public AtividadeService(AlunoRepository alunoRepository, AtividadeRepository atividaRepository) {
+            this.alunoRepository = alunoRepository;
+            this.atividaRepository = atividaRepository;
+        }
+    
+        public List<AtividadeDTO> findAtividades(Long aluno_id) {
+    
+            Optional<AlunoDTO> aluno = alunoRepository.findById(aluno_id).map(Aluno::getDTO);
+    
+            return aluno.get().getAtividades();
+        }
+    
+        public ResponseEntity<Object> addAtividade(Long aluno_id, Atividade atividade) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+    
+            atividade.setAluno(aluno.get());
+    
+            atividaRepository.save(atividade);
+    
+            if (aluno.isPresent()) {
+                return ResponseEntity.accepted().body("Atividade adicionada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno não encontrado");
+            }
+        }
+    
+        public ResponseEntity<Object> updateAtividade(Long aluno_id, Long atividade_id, Atividade atividade) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+    
+            if (aluno.isPresent()) {
+    
+                List<Atividade> atividades = aluno.get().getAtividades();
+    
+                atividade.setId(atividade_id);
+                atividade.setAluno(aluno.get());
+    
+                boolean fazParte = false;
+    
+                for (Atividade atividadeTemp : atividades) {
+                    if (atividadeTemp.getId().equals(atividade_id)) {
+                        fazParte = true;
+                    }
+                }
+    
+                if (fazParte) {
+                    atividaRepository.save(atividade);
+                }
+                else {
+                    return ResponseEntity.unprocessableEntity().body("Atividade não encontrada");
+                }
+    
+                return ResponseEntity.accepted().body("Atividade atualizada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno não encontrado");
+            }
+        }
+    
+        public ResponseEntity<Object> deleteAtividade(Long aluno_id, Long atividade_id) {
+    
+            Optional<Aluno> aluno = alunoRepository.findById(aluno_id);
+            List<Atividade> atividades = aluno.get().getAtividades();
+            boolean sucesso = false;
+    
+            for (Atividade atividadeTemp : atividades) {
+                if (atividadeTemp.getId().equals(atividade_id)) {
+                    atividaRepository.deleteById(atividade_id);
+                    sucesso = true;
+                }
+            }
+    
+            if (sucesso) {
+                return ResponseEntity.accepted().body("Atividade deletada com sucesso");
+            }
+            else {
+                return ResponseEntity.unprocessableEntity().body("Aluno ou atividade não existe");
+            }
+        }
+    
+        private AtividadeDTO convertEntitytoDto(Atividade atividade) {
+            AtividadeDTO atividadeDTO = new AtividadeDTO();
+    
+            atividadeDTO.setId(atividade.getId());
+            atividadeDTO.setDescricao(atividade.getDescricao());
+    
+            return atividadeDTO;
+        }
+    }
+
+Crie o pacote `controller` com a classe:
+
+**AlunoController.java**
+
+    package br.com.hmslima.escola.controller;
+    
+    import br.com.hmslima.escola.dto.AlunoDTO;
+    import br.com.hmslima.escola.dto.AtividadeDTO;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.entity.Atividade;
+    import br.com.hmslima.escola.service.AlunoService;
+    import br.com.hmslima.escola.service.AtividadeService;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @RestController
+    @CrossOrigin
+    @RequestMapping("/api/alunos")
+    public class AlunoController {
+    
+        private AlunoService alunoService;
+        private AtividadeService atividadeService;
+    
+        public AlunoController(AlunoService alunoService, AtividadeService atividadeService) {
+            this.alunoService = alunoService;
+            this.atividadeService = atividadeService;
+        }
+    
+        @GetMapping("/find/{id}")
+        public ResponseEntity<AlunoDTO> findAluno(@PathVariable("id") Long id) {
+            AlunoDTO aluno = alunoService.findAluno(id);
+            return new ResponseEntity<>(aluno, HttpStatus.OK);
+        }
+    
+        @GetMapping("/all")
+        public ResponseEntity<List<AlunoDTO>> findAllAlunos() {
+            List<AlunoDTO> alunos = alunoService.findAllAlunos();
+            return new ResponseEntity<>(alunos, HttpStatus.OK);
+        }
+    
+        @PostMapping("/add")
+        public ResponseEntity<AlunoDTO> addAluno(@RequestBody Aluno aluno) {
+            AlunoDTO addedAluno = alunoService.addAluno(aluno);
+            return new ResponseEntity<>(addedAluno, HttpStatus.CREATED);
+        }
+    
+        @PutMapping("/update")
+        public ResponseEntity<AlunoDTO> updateAluno(@RequestBody Aluno aluno) {
+            AlunoDTO updatedAluno = alunoService.updateAluno(aluno);
+            return new ResponseEntity<>(updatedAluno, HttpStatus.OK);
+        }
+    
+        @DeleteMapping("/delete/{id}")
+        public ResponseEntity<?> deleteAluno(@PathVariable("id") Long id) {
+            alunoService.deleteAluno(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    
+        @GetMapping("/{id}/atividades/all")
+        public ResponseEntity<List<AtividadeDTO>> findAtividades(@PathVariable("id") Long id) {
+            List<AtividadeDTO> atividades = atividadeService.findAtividades(id);
             return new ResponseEntity<>(atividades, HttpStatus.OK);
         }
     
