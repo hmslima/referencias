@@ -238,6 +238,8 @@
 
 	* [Microsserviço Aluno](#microservices_student)
 
+		* [Atualização (Spring Cloud OpenFeign)](#)
+
 # Introdução<span id="intro"></span>
 
 Leia o [README](README.md).
@@ -17766,7 +17768,9 @@ Crie o pacote `controller` e crie a classe:
 
 ## Microsserviço Aluno<span id="microservices_student"></span>
 
-Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver, Spring data JPA e – **aqui vem a novidade** – Spring Reactive Web *(que é para termos o WebFlux)*.
+Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver, Spring data JPA e – aqui vem a novidade – Spring Reactive Web *(que é para termos o WebFlux)*.
+
+**SE VOCÊ QUISER COMEÇAR COM A VERSÃO ATUALIZADA:** Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver, Spring data JPA e OpenFeign. Então é só copiar os arquivos do subcapítulo [Atualização](#microservices_student_openfeign) e o resto dos arquivos deste capítulo que forem diferentes dos da atualização.
 
 **application.properties**
 
@@ -18155,15 +18159,240 @@ Crie o pacore `controller` com a classe:
         }
     
         @PostMapping("/alunos")
-        public ResponseEntity<Aluno> addAluno(@RequestBody Aluno aluno) {
+        public ResponseEntity<AlunoResponse> addAluno(@RequestBody Aluno aluno) {
             Aluno addedAluno = alunoService.addAluno(aluno);
-            return new ResponseEntity<>(addedAluno, HttpStatus.CREATED);
+            AlunoResponse alunoResponse = addedAluno.getDto();
+            alunoResponse.setEnderecoResponse(alunoService.findEndereco(aluno.getEnderecoId()));
+            return new ResponseEntity<>(alunoResponse, HttpStatus.CREATED);
         }
     
         @PutMapping("/alunos/{id}")
-        public ResponseEntity<Aluno> updateAluno(@RequestBody Aluno aluno, @PathVariable("id") Long id) {
+        public ResponseEntity<AlunoResponse> updateAluno(@RequestBody Aluno aluno, @PathVariable("id") Long id) {
             Aluno updatedAluno = alunoService.updateAluno(aluno, id);
-            return new ResponseEntity<>(updatedAluno, HttpStatus.OK);
+            AlunoResponse alunoResponse = updatedAluno.getDto();
+            alunoResponse.setEnderecoResponse(alunoService.findEndereco(aluno.getEnderecoId()));
+            return new ResponseEntity<>(alunoResponse, HttpStatus.OK);
+        }
+    
+        @DeleteMapping("/alunos/{id}")
+        public ResponseEntity<?> deleteAluno(@PathVariable("id") Long id) {
+            alunoService.deleteAluno(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    
+    }
+
+### Atualização (Spring Cloud OpenFeign)<span id="microservices_student_openfeign"></span>
+
+O OpenFeign faz a mesma coisa que o WebClient, mas de uma forma mais simplificada.
+
+Se você não inseriu o OpenFeign no momento de criação do seu projeto Spring Boot no Initializr: se dirija até o site do Spring Boot Initializr para você pegar a referência do OpenFeign. No dia que escrevi este parágrafo, necessitei fazer as seguintes modificações no meu arquivo `pom.xml`:
+
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
+    </properties>
+
+<span></span>
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-openfeign</artifactId>
+    </dependency>
+
+E entre `<dependencies></dependencies>` e `<build></build>` coloque:
+
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>org.springframework.cloud</groupId>
+          <artifactId>spring-cloud-dependencies</artifactId>
+          <version>${spring-cloud.version}</version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+
+De novo, vá para o site Spring Boot Initializr e gere as dependências, pode ser que muito tenha mudado quando você ler este texto.
+
+Agora podemos modificar nosso código. Você pode comelar removendo todas as referencias ao WebClient que se encontram no arquivo principal do app e adicione a *annotation* `@EnableFeignClients`.
+
+    package br.com.hmslima.escola;
+    
+    import org.springframework.beans.factory.annotation.Value;
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.openfeign.EnableFeignClients;
+    
+    @SpringBootApplication
+    @EnableFeignClients
+    public class EscolaApplication {
+    
+    	@Value("${endereco.service.url}")
+    	private String enderecoServiceUrl;
+    
+    	public static void main(String[] args) {
+    		SpringApplication.run(EscolaApplication.class, args);
+    	}
+    
+    }
+
+Então crie o pacote `feignclients` com a interface:
+
+    package br.com.hmslima.escola.feignclients;
+    
+    import br.com.hmslima.escola.dto.EnderecoResponse;
+    import org.springframework.cloud.openfeign.FeignClient;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PathVariable;
+    
+    @FeignClient(url = "${endereco.service.url}", value = "endereco-client")
+    public interface EnderecoClient {
+    
+        @GetMapping("/enderecos/{id}")
+        public EnderecoResponse findEndereco(@PathVariable("id") Long id);
+    
+    }
+
+No pacote `service`, modifique a classe:
+
+**AlunoService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.dto.AlunoResponse;
+    import br.com.hmslima.escola.dto.EnderecoResponse;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.exception.AlunoNotFoundExeption;
+    import br.com.hmslima.escola.feignclients.EnderecoClient;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    
+    import org.springframework.stereotype.Service;
+    import org.springframework.web.reactive.function.client.WebClient;
+    import reactor.core.publisher.Mono;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.stream.Collectors;
+    
+    @Service
+    @Transactional
+    public class AlunoService {
+    
+        private AlunoRepository alunoRepository;
+    
+        @Autowired
+        EnderecoClient enderecoClient;
+    
+        @Autowired
+        public AlunoService(AlunoRepository alunoRepository) {
+            this.alunoRepository = alunoRepository;
+        }
+    
+        public AlunoResponse findAluno(Long id) {
+            Aluno aluno = alunoRepository.findById(id).orElseThrow(() -> new AlunoNotFoundExeption(id));
+            AlunoResponse alunoResponse = new AlunoResponse(aluno);
+    
+            alunoResponse.setEnderecoResponse(enderecoClient.findEndereco(aluno.getEnderecoId()));
+    
+            return alunoResponse;
+        }
+    
+        public List<AlunoResponse> findAllAlunos() {
+            List<AlunoResponse> alunos = alunoRepository.findAll().stream().map(aluno -> {
+                AlunoResponse alunoResponse = aluno.getDto();
+                alunoResponse.setEnderecoResponse(enderecoClient.findEndereco(aluno.getEnderecoId()));
+                return alunoResponse;
+            }).collect(Collectors.toList());
+            return alunos;
+        }
+    
+        public Aluno addAluno(Aluno aluno) {
+    
+            aluno.setId(0L);
+            var savedAluno = alunoRepository.save(aluno);
+            return savedAluno;
+        }
+    
+        public Aluno updateAluno(Aluno newAluno, Long id) {
+            return alunoRepository.findById(id).map(aluno -> {
+                  aluno.setNome(newAluno.getNome());
+                  aluno.setSobrenome(newAluno.getSobrenome());
+                  aluno.setAno(newAluno.getAno());
+                  aluno.setEnderecoId(newAluno.getEnderecoId());
+                  return alunoRepository.save(aluno);
+            })
+            .orElseGet(() -> {
+                  newAluno.setId(id);
+                  return alunoRepository.save(newAluno);
+            });
+        }
+    
+        public void deleteAluno(Long id) {
+            alunoRepository.deleteById(id);
+        }
+    }
+
+No pacote `controller`, modifique a classe:
+
+**AlunoController.java**
+
+    package br.com.hmslima.escola.controller;
+    
+    import br.com.hmslima.escola.dto.AlunoResponse;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.feignclients.EnderecoClient;
+    import br.com.hmslima.escola.service.AlunoService;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @RestController
+    @CrossOrigin
+    @RequestMapping("/api")
+    public class AlunoController {
+    
+        private AlunoService alunoService;
+    
+        @Autowired
+        EnderecoClient enderecoClient;
+    
+        @Autowired
+        public AlunoController(AlunoService alunoService) {
+            this.alunoService = alunoService;
+        }
+    
+        @GetMapping("/alunos/{id}")
+        public ResponseEntity<AlunoResponse> findAluno(@PathVariable("id") Long id) {
+            AlunoResponse aluno = alunoService.findAluno(id);
+            return new ResponseEntity<>(aluno, HttpStatus.OK);
+        }
+    
+        @GetMapping("/alunos")
+        public ResponseEntity<List<AlunoResponse>> findAllAlunos() {
+            List<AlunoResponse> alunos = alunoService.findAllAlunos();
+            return new ResponseEntity<>(alunos, HttpStatus.OK);
+        }
+    
+        @PostMapping("/alunos")
+        public ResponseEntity<AlunoResponse> addAluno(@RequestBody Aluno aluno) {
+            Aluno addedAluno = alunoService.addAluno(aluno);
+            AlunoResponse alunoResponse = addedAluno.getDto();
+            alunoResponse.setEnderecoResponse(enderecoClient.findEndereco(aluno.getEnderecoId()));
+            return new ResponseEntity<>(alunoResponse, HttpStatus.CREATED);
+        }
+    
+        @PutMapping("/alunos/{id}")
+        public ResponseEntity<AlunoResponse> updateAluno(@RequestBody Aluno aluno, @PathVariable("id") Long id) {
+            Aluno updatedAluno = alunoService.updateAluno(aluno, id);
+            AlunoResponse alunoResponse = updatedAluno.getDto();
+            alunoResponse.setEnderecoResponse(enderecoClient.findEndereco(aluno.getEnderecoId()));
+            return new ResponseEntity<>(alunoResponse, HttpStatus.OK);
         }
     
         @DeleteMapping("/alunos/{id}")

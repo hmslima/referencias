@@ -46,6 +46,10 @@ Crie sua aplicação lá agora:
 
 *Aqui o próprio Heroku adiciona o repositório dele no meu Git*
 
+Caso a aplicação já exista, use o comando abaixo:
+
+    heroku git:remote -a <nome_da_aplicação>
+
 Agora vincularemos o banco de dados à nossa aplicação:
 
     heroku addons:create heroku-postgresql:hobby-dev
@@ -105,7 +109,7 @@ Agora podemos criar nossas variáveis, no contexto de uma configuração de banc
 Num arquivo .properties para Spring, ficaria assim:
 
     spring.datasource.url=${JDBC_DATABASE_URL}
-    spring.datasource.user=${JDBC_DATABASE_USER}
+    spring.datasource.username=${JDBC_DATABASE_USER}
     spring.datasource.password=${JDBC_DATABASE_PASSWORD}
 
 Para o banco de dados, o Heroku já nos fornece uma variável, usarei o *property* do Spring Boot como exemplo:
