@@ -228,9 +228,15 @@
 
 * [BÔNUS: Calculadora](#calculator)
 
-* [BÔNUS: RPC API](#rpc)
+* [BÔNUS: REST API](#rpc)
 
 	* [Usando DTOs em vez de @JsonIgnore ou anotações similares](#rpc_dto)
+
+* [BÔNUS: Microsserviços](#microservices)
+
+	* [Microsserviço Endereço](#microservices_address)
+
+	* [Microsserviço Aluno](#microservices_student)
 
 # Introdução<span id="intro"></span>
 
@@ -16408,9 +16414,9 @@ No Postman, use este *body* abaixo, no método POST, para o link `http://localho
         "num41" : 6.3
     }
 
-# BÔNUS: RPC API<span id="rpc"></span>
+# BÔNUS: REST API<span id="rpc"></span>
 
-O que muita gente chama de REST API *(e a maior parte do que fizemos até agora...)* são [RPC](https://pt.wikipedia.org/wiki/Chamada_de_procedimento_remoto).
+Segundo alguns autores, o que muita gente chama de REST API *(e a maior parte do que fizemos até agora...)* são [RPC](https://pt.wikipedia.org/wiki/Chamada_de_procedimento_remoto). Bom, então tecnicamente o que faremos agora também será um RPC, mas chamarei de REST mesmo assim porque essa é a maneira que 99% dos tutoriais ensinam, então prefiro ficar do lado da indústria do que da academia.
 
 O que você verá agora não é muito diferente do que vimos, mas este é bem interessante:
 
@@ -17510,4 +17516,660 @@ Crie o pacote `controller` com a classe:
         public ResponseEntity deleteAtividade(@PathVariable("id") Long id, @PathVariable("a_id") Long a_id) {
             return atividadeService.deleteAtividade(id, a_id);
         }
+    }
+
+# BÔNUS: Microsserviços<span id="microservices"></span>
+
+Criaremos dois projetos, mas os rodaremos ao mesmo tempo. Separarei este capítulo em 2, um pra cada projeto, mas lembre-se de rodar tudo junto.
+
+Crie o banco de dados:
+
+**SQL**
+
+    CREATE TABLE aluno (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        sobrenome VARCHAR(255) NOT NULL,
+        ano INT NOT NULL,
+        endereco_id INT NOT NULL
+    );
+    
+    CREATE TABLE endereco (
+        id SERIAL PRIMARY KEY,
+        rua VARCHAR(255) NOT NULL,
+        numero INT NOT NULL
+    );
+    
+    INSERT INTO endereco (rua, numero) VALUES ('Rua dos Bandeirantes', 48);
+    INSERT INTO endereco (rua, numero) VALUES ('Rua Humildes', 1052);
+    INSERT INTO endereco (rua, numero) VALUES ('Avenida Paulinho', 365);
+    INSERT INTO endereco (rua, numero) VALUES ('Rua Adenil Falcão', 1152);
+    
+    INSERT INTO aluno (nome, sobrenome, ano, endereco_id) VALUES ('João', 'Macedo', '6', 4);
+    INSERT INTO aluno (nome, sobrenome, ano, endereco_id) VALUES ('Paula', 'Cristina', '6', 1);
+    INSERT INTO aluno (nome, sobrenome, ano, endereco_id) VALUES ('Ricardo', 'Andrade', '6', 2);
+    INSERT INTO aluno (nome, sobrenome, ano, endereco_id) VALUES ('Amélia', 'Duarte', '6', 3);
+    INSERT INTO aluno (nome, sobrenome, ano, endereco_id) VALUES ('Arthur', 'Duarte', '6', 3);
+
+*Se você estiver no Windows, use o pgAdmin.*
+
+## Microsserviço Endereço<span id="microservices_address"></span>
+
+Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver e Spring data JPA.
+
+**application.properties**
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/<banco_de_dados>
+    spring.datasource.username=<usuário>
+    spring.datasource.password=<senha>
+    
+    spring.application.name=endereco-service
+    server.port=8082
+
+*Repare que têm algumas novidades!*
+
+Crie o pacote `entity` com a classe:
+
+**Endereco.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import javax.persistence.*;
+    
+    @Entity
+    @Table(name="endereco")
+    public class Endereco {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @Column(name="rua")
+        private String rua;
+    
+        @Column(name="numero")
+        private int numero;
+    
+        public Endereco() {
+        }
+    
+        public Endereco(String rua, int numero) {
+            this.rua = rua;
+            this.numero = numero;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getRua() {
+            return rua;
+        }
+    
+        public void setRua(String rua) {
+            this.rua = rua;
+        }
+    
+        public int getNumero() {
+            return numero;
+        }
+    
+        public void setNumero(int numero) {
+            this.numero = numero;
+        }
+    }
+
+Crie o pacote `repository` com a interface:
+
+**EnderecoRepository.java**
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Endereco;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface EnderecoRepository extends JpaRepository<Endereco, Long> {
+    }
+
+Crie o pacote `exception` com a classe:
+
+**EnderecoNotFoundExeption.java**
+
+    package br.com.hmslima.escola.exception;
+    
+    public class EnderecoNotFoundExeption extends RuntimeException{
+    
+        public EnderecoNotFoundExeption(Long id) {
+            super("Não foi possível encontrar o endereço " + id);
+        }
+    }
+
+Crie o pacote `service` com a classe:
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.entity.Endereco;
+    import br.com.hmslima.escola.exception.EnderecoNotFoundExeption;
+    import br.com.hmslima.escola.repository.EnderecoRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    
+    @Service
+    @Transactional
+    public class EnderecoService {
+    
+        private EnderecoRepository enderecoRepository;
+    
+        @Autowired
+        public EnderecoService(EnderecoRepository enderecoRepository) {
+            this.enderecoRepository = enderecoRepository;
+        }
+    
+        public Endereco findAtividade(Long id) {
+            return enderecoRepository.findById(id).orElseThrow(() -> new EnderecoNotFoundExeption(id));
+        }
+    
+        public List<Endereco> findAtividades() {
+            return enderecoRepository.findAll();
+        }
+    
+        public Endereco saveAtividade(Endereco atividade) {
+            enderecoRepository.save(atividade);
+            return atividade;
+        }
+    
+        public Endereco updateAtividade(Endereco newEndereco, Long id) {
+            return enderecoRepository.findById(id).map(endereco -> {
+                endereco.setRua(newEndereco.getRua());
+                endereco.setNumero(newEndereco.getNumero());
+                return enderecoRepository.save(endereco);
+            })
+            .orElseGet(() -> {
+                newEndereco.setId(id);
+                return enderecoRepository.save(newEndereco);
+            });
+        }
+    
+        public void deleteAtividade(Long id) {
+            enderecoRepository.deleteById(id);
+        }
+    }
+
+Crie o pacote `controller` e crie a classe:
+
+**EnderecoController.java**
+
+    package br.com.hmslima.escola.controller;
+    
+    import br.com.hmslima.escola.entity.Endereco;
+    import br.com.hmslima.escola.service.EnderecoService;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @RestController
+    @CrossOrigin
+    @RequestMapping("/api")
+    public class EnderecoController {
+        private EnderecoService enderecoService;
+    
+        public EnderecoController(EnderecoService atividadeService) {
+            this.enderecoService = atividadeService;
+        }
+    
+        @GetMapping("/enderecos")
+        public ResponseEntity<List<Endereco>> findEnderecos() {
+            List<Endereco> atividades = enderecoService.findAtividades();
+            return new ResponseEntity<>(atividades, HttpStatus.OK);
+        }
+    
+        @GetMapping("/enderecos/{id}")
+        public ResponseEntity<Endereco> findEndereco(@PathVariable("id") Long id) {
+            Endereco endereco = enderecoService.findAtividade(id);
+            return new ResponseEntity<>(endereco, HttpStatus.OK);
+        }
+    
+        @PostMapping("/enderecos")
+        public ResponseEntity addEndereco(@RequestBody Endereco atividade) {
+            atividade.setId(0L);
+            Endereco savedEndereco = enderecoService.saveAtividade(atividade);
+            return new ResponseEntity<>(savedEndereco, HttpStatus.CREATED);
+        }
+    
+        @PutMapping("/enderecos/{id}")
+        public ResponseEntity updateEndereco(@RequestBody Endereco atividade, @PathVariable("id") Long id) {
+            Endereco updatedEndereco = enderecoService.updateAtividade(atividade, id);
+            return new ResponseEntity<>(updatedEndereco, HttpStatus.OK);
+        }
+    
+        /*@PutMapping("/enderecos/")
+        public ResponseEntity updateEndereco(@RequestBody Endereco atividade) {
+            Endereco updatedEndereco = enderecoService.saveAtividade(atividade);
+            return new ResponseEntity<>(updatedEndereco, HttpStatus.OK);
+        }*/
+    
+        @DeleteMapping("/enderecos/{id}")
+        public ResponseEntity deleteEndereco(@PathVariable("id") Long id) {
+            enderecoService.deleteAtividade(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    }
+
+## Microsserviço Aluno<span id="microservices_student"></span>
+
+Na criação do projeto Spring Boot, pegue as dependências: Spring Web, PostgreSQL Driver, Spring data JPA e – **aqui vem a novidade** – Spring Reactive Web *(que é para termos o WebFlux)*.
+
+**application.properties**
+
+    spring.datasource.url=jdbc:postgresql://localhost:5432/<banco_de_dados>
+    spring.datasource.username=<usuário>
+    spring.datasource.password=<senha>
+    
+    spring.application.name=aluno-service
+    server.port=8080
+
+    endereco.service.url=http://localhost:8082/api
+
+*Repare que têm algumas novidades!*
+
+Uma novidade importante já na classe principal:
+
+**EscolaApplication.java**
+
+    package br.com.hmslima.escola;
+    
+    import org.springframework.beans.factory.annotation.Value;
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.web.reactive.function.client.WebClient;
+    
+    @SpringBootApplication
+    public class EscolaApplication {
+    
+    	@Value("${endereco.service.url}")
+    	private String enderecoServiceUrl;
+    
+    	public static void main(String[] args) {
+    		SpringApplication.run(EscolaApplication.class, args);
+    	}
+    
+    	@Bean
+    	public WebClient webClient () {
+    		WebClient webClient = WebClient.builder().baseUrl(enderecoServiceUrl).build();
+    		return webClient;
+    	}
+    
+    }
+
+Crie o pacote `entity` com a classe:
+
+**Aluno.java**
+
+    package br.com.hmslima.escola.entity;
+    
+    import br.com.hmslima.escola.dto.AlunoResponse;
+    import br.com.hmslima.escola.dto.EnderecoResponse;
+    
+    import javax.persistence.*;
+    import java.util.ArrayList;
+    
+    @Entity
+    @Table(name="aluno")
+    public class Aluno {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name="id")
+        private Long id;
+    
+        @Column(name="nome")
+        private String nome;
+    
+        @Column(name="sobrenome")
+        private String sobrenome;
+    
+        @Column(name="ano")
+        private int ano;
+    
+        @Column(name="endereco_id")
+        private Long enderecoId;
+    
+        public Aluno() {
+        }
+    
+        public Aluno(String nome, String sobrenome, int ano, Long enderecoId) {
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.ano = ano;
+            this.enderecoId = enderecoId;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public int getAno() {
+            return ano;
+        }
+    
+        public void setAno(int ano) {
+            this.ano = ano;
+        }
+    
+        public Long getEnderecoId() {
+            return enderecoId;
+        }
+    
+        public void setEnderecoId(Long enderecoId) {
+            this.enderecoId = enderecoId;
+        }
+    
+        public AlunoResponse getDto () {
+            return new AlunoResponse(this.id, this.nome, this.sobrenome, this.ano, new EnderecoResponse());
+        }
+    }
+
+Crie o pacote `exception` com a classe:
+
+**AlunoNotFoundExeption.java**
+
+    package br.com.hmslima.escola.exception;
+    
+    public class AlunoNotFoundExeption extends RuntimeException{
+    
+        public AlunoNotFoundExeption(Long id) {
+            super("Não foi possível encontrar o aluno " + id);
+        }
+    }
+
+Crie o pacote `dao` com as classes:
+
+**AlunoResponse.java**
+
+    package br.com.hmslima.escola.dto;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    
+    public class AlunoResponse {
+        private Long id;
+        private String nome;
+        private String sobrenome;
+        private int ano;
+        private EnderecoResponse enderecoResponse;
+    
+        // Repare como fiz este construtor
+        public AlunoResponse(Aluno aluno) {
+            this.nome = aluno.getNome();
+            this.sobrenome = aluno.getSobrenome();
+            this.ano = aluno.getAno();
+        }
+    
+        public AlunoResponse(Long id, String nome, String sobrenome, int ano, EnderecoResponse enderecoResponse) {
+            this.id = id;
+            this.nome = nome;
+            this.sobrenome = sobrenome;
+            this.ano = ano;
+            this.enderecoResponse = enderecoResponse;
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getNome() {
+            return nome;
+        }
+    
+        public void setNome(String nome) {
+            this.nome = nome;
+        }
+    
+        public String getSobrenome() {
+            return sobrenome;
+        }
+    
+        public void setSobrenome(String sobrenome) {
+            this.sobrenome = sobrenome;
+        }
+    
+        public int getAno() {
+            return ano;
+        }
+    
+        public void setAno(int ano) {
+            this.ano = ano;
+        }
+    
+        public EnderecoResponse getEnderecoResponse() {
+            return enderecoResponse;
+        }
+    
+        public void setEnderecoResponse(EnderecoResponse enderecoResponse) {
+            this.enderecoResponse = enderecoResponse;
+        }
+    }
+
+**EnderecoResponse.java**
+
+    package br.com.hmslima.escola.dto;
+    
+    public class EnderecoResponse {
+    
+        private Long id;
+        private String rua;
+        private int numero;
+    
+        public EnderecoResponse() {
+        }
+    
+        public Long getId() {
+            return id;
+        }
+    
+        public void setId(Long id) {
+            this.id = id;
+        }
+    
+        public String getRua() {
+            return rua;
+        }
+    
+        public void setRua(String rua) {
+            this.rua = rua;
+        }
+    
+        public int getNumero() {
+            return numero;
+        }
+    
+        public void setNumero(int numero) {
+            this.numero = numero;
+        }
+    }
+
+Crie o pacote `repository` com a interface:
+
+    package br.com.hmslima.escola.repository;
+    
+    import br.com.hmslima.escola.entity.Aluno;
+    import org.springframework.data.jpa.repository.JpaRepository;
+    
+    public interface AlunoRepository extends JpaRepository<Aluno, Long>{
+    }
+
+Crie o pacote `service` com a classe:
+
+**AlunoService.java**
+
+    package br.com.hmslima.escola.service;
+    
+    import br.com.hmslima.escola.dto.AlunoResponse;
+    import br.com.hmslima.escola.dto.EnderecoResponse;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.exception.AlunoNotFoundExeption;
+    import br.com.hmslima.escola.repository.AlunoRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    
+    import org.springframework.stereotype.Service;
+    import org.springframework.web.reactive.function.client.WebClient;
+    import reactor.core.publisher.Mono;
+    
+    import javax.transaction.Transactional;
+    import java.util.List;
+    import java.util.stream.Collectors;
+    
+    @Service
+    @Transactional
+    public class AlunoService {
+    
+        private AlunoRepository alunoRepository;
+    
+        @Autowired
+        WebClient webClient;
+    
+        @Autowired
+        public AlunoService(AlunoRepository alunoRepository) {
+            this.alunoRepository = alunoRepository;
+        }
+    
+        public AlunoResponse findAluno(Long id) {
+            Aluno aluno = alunoRepository.findById(id).orElseThrow(() -> new AlunoNotFoundExeption(id));
+            AlunoResponse alunoResponse = new AlunoResponse(aluno);
+    
+            alunoResponse.setEnderecoResponse(findEndereco(aluno.getEnderecoId()));
+    
+            return alunoResponse;
+        }
+    
+        public List<AlunoResponse> findAllAlunos() {
+            List<AlunoResponse> alunos = alunoRepository.findAll().stream().map(aluno -> {
+                AlunoResponse alunoResponse = aluno.getDto();
+                alunoResponse.setEnderecoResponse(findEndereco(aluno.getEnderecoId()));
+                return alunoResponse;
+            }).collect(Collectors.toList());
+            return alunos;
+        }
+    
+        public Aluno addAluno(Aluno aluno) {
+    
+            aluno.setId(0L);
+            var savedAluno = alunoRepository.save(aluno);
+            return savedAluno;
+        }
+    
+        public Aluno updateAluno(Aluno newAluno, Long id) {
+            return alunoRepository.findById(id).map(aluno -> {
+                  aluno.setNome(newAluno.getNome());
+                  aluno.setSobrenome(newAluno.getSobrenome());
+                  aluno.setAno(newAluno.getAno());
+                  aluno.setEnderecoId(newAluno.getEnderecoId());
+                  return alunoRepository.save(aluno);
+            })
+            .orElseGet(() -> {
+                  newAluno.setId(id);
+                  return alunoRepository.save(newAluno);
+            });
+        }
+    
+        public void deleteAluno(Long id) {
+            alunoRepository.deleteById(id);
+        }
+    
+        public EnderecoResponse findEndereco(long id) {
+            Mono<EnderecoResponse> enderecoResponse = webClient.get().uri("/enderecos/" + id)
+                    .retrieve().bodyToMono(EnderecoResponse.class);
+    
+            return enderecoResponse.block();
+        }
+    }
+
+Crie o pacore `controller` com a classe:
+
+**AlunoController.java**
+
+    package br.com.hmslima.escola.controller;
+    
+    import br.com.hmslima.escola.dto.AlunoResponse;
+    import br.com.hmslima.escola.entity.Aluno;
+    import br.com.hmslima.escola.service.AlunoService;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.*;
+    
+    import java.util.List;
+    
+    @RestController
+    @CrossOrigin
+    @RequestMapping("/api")
+    public class AlunoController {
+    
+        private AlunoService alunoService;
+    
+        public AlunoController(AlunoService alunoService) {
+            this.alunoService = alunoService;
+        }
+    
+        @GetMapping("/alunos/{id}")
+        public ResponseEntity<AlunoResponse> findAluno(@PathVariable("id") Long id) {
+            AlunoResponse aluno = alunoService.findAluno(id);
+            return new ResponseEntity<>(aluno, HttpStatus.OK);
+        }
+    
+        @GetMapping("/alunos")
+        public ResponseEntity<List<AlunoResponse>> findAllAlunos() {
+            List<AlunoResponse> alunos = alunoService.findAllAlunos();
+            return new ResponseEntity<>(alunos, HttpStatus.OK);
+        }
+    
+        @PostMapping("/alunos")
+        public ResponseEntity<Aluno> addAluno(@RequestBody Aluno aluno) {
+            Aluno addedAluno = alunoService.addAluno(aluno);
+            return new ResponseEntity<>(addedAluno, HttpStatus.CREATED);
+        }
+    
+        @PutMapping("/alunos/{id}")
+        public ResponseEntity<Aluno> updateAluno(@RequestBody Aluno aluno, @PathVariable("id") Long id) {
+            Aluno updatedAluno = alunoService.updateAluno(aluno, id);
+            return new ResponseEntity<>(updatedAluno, HttpStatus.OK);
+        }
+    
+        @DeleteMapping("/alunos/{id}")
+        public ResponseEntity<?> deleteAluno(@PathVariable("id") Long id) {
+            alunoService.deleteAluno(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        }
+    
     }
